@@ -26,6 +26,11 @@ include(cmake/CPM.cmake)
 # PackageProject.cmake will be used to make our target installable
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 
+CPMAddPackage(
+  GITHUB_REPOSITORY jarro2783/cxxopts
+  VERSION 3.0.0
+  OPTIONS "CXXOPTS_BUILD_EXAMPLES NO" "CXXOPTS_BUILD_TESTS NO" "CXXOPTS_ENABLE_INSTALL YES"
+)
 
 CPMAddPackage(
   NAME fmt
