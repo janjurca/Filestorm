@@ -9,4 +9,4 @@ FileStrategy::FileStrategy(int file_count, int directory_count_per_level, int di
       _file_size_variance(file_size_variance),
       _file_content(file_content) {}
 
-FileManager::FileManager(FileStrategy file_strategy) {}
+FileManager::FileManager(FileStrategy file_strategy) : _file_strategy(file_strategy) {}

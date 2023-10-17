@@ -24,7 +24,8 @@ public:
 
 class FileManager {
 private:
-  /* data */
+  FileStrategy _file_strategy;
+
 public:
   FileManager(FileStrategy file_strategy);
 };
