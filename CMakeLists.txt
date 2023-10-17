@@ -27,6 +27,13 @@ include(cmake/CPM.cmake)
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 
 
+CPMAddPackage(
+  NAME fmt
+  GIT_TAG 10.1.1
+  GITHUB_REPOSITORY fmtlib/fmt
+  OPTIONS "FMT_INSTALL YES" # create an installable target
+)
+
 # ---- Add source files ----
 
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
@@ -46,7 +53,6 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>
 
 # Link dependencies
 target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt)
-target_link_libraries(${PROJECT_NAME} PRIVATE cxxopts)
 
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>

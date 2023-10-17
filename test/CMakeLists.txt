@@ -18,13 +18,6 @@ include(../cmake/CPM.cmake)
 CPMAddPackage("gh:doctest/doctest@2.4.9")
 CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
 
-CPMAddPackage(
-  NAME fmt
-  GIT_TAG 10.1.1
-  GITHUB_REPOSITORY fmtlib/fmt
-  OPTIONS "FMT_INSTALL YES" # create an installable target
-)
-
 if(TEST_INSTALLED_VERSION)
   find_package(Filestorm REQUIRED)
 else()
