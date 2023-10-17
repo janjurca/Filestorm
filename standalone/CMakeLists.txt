@@ -16,6 +16,14 @@ CPMAddPackage(
   OPTIONS "CXXOPTS_BUILD_EXAMPLES NO" "CXXOPTS_BUILD_TESTS NO" "CXXOPTS_ENABLE_INSTALL YES"
 )
 
+CPMAddPackage(
+  NAME fmt
+  GIT_TAG 10.1.1
+  GITHUB_REPOSITORY fmtlib/fmt
+  OPTIONS "FMT_INSTALL YES" # create an installable target
+)
+
+
 CPMAddPackage(NAME Filestorm SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
 
 # ---- Create standalone executable ----
@@ -27,3 +35,4 @@ add_executable(${PROJECT_NAME} ${sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "Filestorm")
 
 target_link_libraries(${PROJECT_NAME} Filestorm::Filestorm cxxopts)
+target_link_libraries(${PROJECT_NAME} Filestorm::Filestorm fmt::fmt)

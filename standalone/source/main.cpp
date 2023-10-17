@@ -1,4 +1,3 @@
-#include <filestorm/greeter.h>
 #include <filestorm/version.h>
 
 #include <cxxopts.hpp>
@@ -6,27 +5,18 @@
 #include <string>
 #include <unordered_map>
 
+#include "config.h"
+
 auto main(int argc, char** argv) -> int {
-  const std::unordered_map<std::string, greeter::LanguageCode> languages{
-      {"en", greeter::LanguageCode::EN},
-      {"de", greeter::LanguageCode::DE},
-      {"es", greeter::LanguageCode::ES},
-      {"fr", greeter::LanguageCode::FR},
-  };
-
-  cxxopts::Options options(*argv, "A program to welcome the world!");
-
-  std::string language;
-  std::string name;
+  cxxopts::Options options(*argv, "Filestorm - modern metadata extensive storage benchmaring tool");
 
   // clang-format off
   options.add_options()
     ("h,help", "Show help")
     ("v,version", "Print the current version number")
-    ("n,name", "Name to greet", cxxopts::value(name)->default_value("World"))
-    ("l,lang", "Language code to use", cxxopts::value(language)->default_value("en"))
+    ("d,directory", "Specify directory which should be tested in")
+    ("s,scenario",std::string("Define which testing mode you'd like to run. Supported: ") + config.get_supported_scenarios_as_string(), cxxopts::value<std::string>()->default_value(config.get_supported_scenarios().at(0).name()) )
   ;
-  // clang-format on
 
   auto result = options.parse(argc, argv);
 
@@ -36,18 +26,14 @@ auto main(int argc, char** argv) -> int {
   }
 
   if (result["version"].as<bool>()) {
-    std::cout << "Greeter, version " << FILESTORM_VERSION << std::endl;
+    std::cout << FILESTORM_VERSION << std::endl;
     return 0;
   }
 
-  auto langIt = languages.find(language);
-  if (langIt == languages.end()) {
-    std::cerr << "unknown language code: " << language << std::endl;
+  if (!result.count("directory")) {
+    std::cout << "Please specify directory to test in" << std::endl;
     return 1;
   }
-
-  greeter::Greeter greeter(name);
-  std::cout << greeter.greet(langIt->second) << std::endl;
-
+  
   return 0;
 }
