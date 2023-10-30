@@ -34,6 +34,8 @@ auto main(int argc, char** argv) -> int {
     std::cout << "Please specify directory to test in" << std::endl;
     return 1;
   }
+
+
   
   return 0;
 }
