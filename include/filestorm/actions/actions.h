@@ -9,6 +9,15 @@
 #include <thread>
 #include <vector>
 
+class FileActionStrategy {
+private:
+  bool m_time_based;
+
+public:
+  FileActionStrategy(bool time_based) : m_time_based(time_based) {}
+  bool is_time_based() { return m_time_based; }
+};
+
 class ActionMonitor;
 
 /**
@@ -53,76 +62,65 @@ std::chrono::nanoseconds VirtualMeasuredAction::getLastDuration() {
  *
  */
 class VirtualMonitoredAction {
-private:
-  ActionMonitor m_monitor;
-
-public:
-  VirtualMonitoredAction(std::chrono::milliseconds monitoring_interval
-                         = std::chrono::milliseconds(100))
-      : m_monitor(*this, std::chrono::milliseconds(monitoring_interval)){};
-
-  void exec() {
-    m_monitor.start();
-    work();
-    m_monitor.stop();
-  }
-
-  virtual void work() { throw "Not implemented"; }
-
-  virtual int monitor() { throw "Not implemented"; }
-
-  virtual std::vector<std::string> monitoredDataNames() { throw "Not implemented"; }
-};
-
-/**
- * @brief Class which monitors action and stores its values in specified intervals.
- *
- */
-class ActionMonitor {
-private:
-  VirtualMonitoredAction& m_action;
+protected:
   std::chrono::milliseconds m_interval;
   std::atomic<bool> m_running;
   std::thread m_thread;
   std::map<std::string, std::vector<float>> m_monitoredData;
   mutable std::mutex m_monitoredDataMutex;
+  std::chrono::nanoseconds m_monitor_started_at;
+  // function callback
+  std::function<void(VirtualMonitoredAction*)> m_on_log;
 
 public:
-  ActionMonitor(VirtualMonitoredAction& action, std::chrono::milliseconds interval)
-      : m_action(action), m_interval(interval), m_running(false) {}
+  VirtualMonitoredAction(std::chrono::milliseconds monitoring_interval,
+                         std::function<void(VirtualMonitoredAction*)> on_log)
+      : m_interval(monitoring_interval), m_on_log(on_log){};
 
-  ~ActionMonitor() {
+  ~VirtualMonitoredAction() {
     if (m_thread.joinable()) {
-      stop();
+      stop_monitor();
       m_thread.join();
     }
   }
 
-  void start() {
+  void exec() {
+    start_monitor();
+    work();
+    stop_monitor();
+  }
+
+  virtual void work() { throw "Not implemented"; }
+
+  void _log_values() {
+    if (m_on_log) {
+      m_on_log(this);
+    }
+    log_values();
+  }
+  virtual void log_values() { throw "Not implemented"; }
+
+  void start_monitor() {
+    m_monitor_started_at = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::high_resolution_clock::now().time_since_epoch());
+
     if (!m_running) {
       m_running = true;
       m_thread = std::thread([this]() {
         while (m_running) {
-          m_action.monitor();  // TODO handle which value should be monitored
+          _log_values();
           std::this_thread::sleep_for(m_interval);
         }
       });
     }
   }
 
-  void stop() {
+  void stop_monitor() {
     if (m_running) {
       m_running = false;
       if (m_thread.joinable()) {
         m_thread.join();
       }
-    }
-  }
-
-  void initMonitoredDataNames(std::vector<std::string> names) {
-    std::lock_guard<std::mutex> lock(m_monitoredDataMutex);
-    for (auto name : names) {
-      m_monitoredData[name] = std::vector<float>();
     }
   }
 
