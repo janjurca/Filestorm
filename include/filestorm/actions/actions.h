@@ -9,16 +9,26 @@
 #include <thread>
 #include <vector>
 
-class FileActionStrategy {
+class FileActionAttributes {
 private:
   bool m_time_based;
   std::chrono::milliseconds m_interval;
+  unsigned int m_block_size;
+  unsigned int m_file_size;
+  std::string m_file_path;
 
 public:
-  FileActionStrategy(bool time_based, std::chrono::milliseconds interval)
-      : m_time_based(time_based), m_interval(interval) {}
+  FileActionAttributes(bool time_based, std::chrono::milliseconds interval, unsigned int block_size,
+                       unsigned int file_size, std::string file_path)
+      : m_time_based(time_based),
+        m_interval(interval),
+        m_block_size(block_size),
+        m_file_size(file_size),
+        m_file_path(file_path) {}
   bool is_time_based() { return m_time_based; }
   std::chrono::milliseconds get_interval() { return m_interval; }
+  unsigned int get_block_size() { return m_block_size; }
+  unsigned int get_file_size() { return m_file_size; }
 };
 
 class ActionMonitor;

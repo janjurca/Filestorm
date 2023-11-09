@@ -15,20 +15,20 @@
 #include <vector>
 // ABOUT DIRECT IO https://github.com/facebook/rocksdb/wiki/Direct-IO
 
-class ReadAction : public VirtualMonitoredAction, public FileActionStrategy {
+class ReadAction : public VirtualMonitoredAction, public FileActionAttributes {
 private:
   std::string m_file_path;
   size_t m_block_size;
   long long m_read_bytes = 0;
 
 public:
-  ReadAction(std::string file_path, size_t block_size,
-             std::chrono::milliseconds monitoring_interval,
-             std::function<void(VirtualMonitoredAction*)> on_log, FileActionStrategy file_strategy)
+  ReadAction(std::chrono::milliseconds monitoring_interval,
+             std::function<void(VirtualMonitoredAction*)> on_log,
+             FileActionAttributes file_strategy)
       : m_file_path(file_path),
         m_block_size(block_size),
         VirtualMonitoredAction(monitoring_interval, on_log),
-        FileActionStrategy(file_strategy) {}
+        FileActionAttributes(file_strategy) {}
 
   void work() override {
     std::ifstream file(m_file_path);
@@ -67,7 +67,7 @@ public:
   }
 };
 
-class WriteAction : public VirtualMonitoredAction, public FileActionStrategy {
+class WriteAction : public VirtualMonitoredAction, public FileActionAttributes {
 private:
   std::string m_file_path;
   size_t m_block_size;
@@ -75,14 +75,14 @@ private:
   long long m_written_bytes = 0;
 
 public:
-  WriteAction(std::string file_path, size_t block_size, size_t file_size,
-              std::chrono::milliseconds monitoring_interval,
-              std::function<void(VirtualMonitoredAction*)> on_log, FileActionStrategy file_strategy)
+  WriteAction(std::chrono::milliseconds monitoring_interval,
+              std::function<void(VirtualMonitoredAction*)> on_log,
+              FileActionAttributes file_strategy)
       : m_file_path(file_path),
         m_block_size(block_size),
         m_file_size(file_size),
         VirtualMonitoredAction(monitoring_interval, on_log),
-        FileActionStrategy(file_strategy) {}
+        FileActionAttributes(file_strategy) {}
 
   inline void generate_random_chunk(char* chunk, size_t size) {
     static std::random_device rd;
