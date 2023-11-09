@@ -12,10 +12,13 @@
 class FileActionStrategy {
 private:
   bool m_time_based;
+  std::chrono::milliseconds m_interval;
 
 public:
-  FileActionStrategy(bool time_based) : m_time_based(time_based) {}
+  FileActionStrategy(bool time_based, std::chrono::milliseconds interval)
+      : m_time_based(time_based), m_interval(interval) {}
   bool is_time_based() { return m_time_based; }
+  std::chrono::milliseconds get_interval() { return m_interval; }
 };
 
 class ActionMonitor;
