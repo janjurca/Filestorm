@@ -39,11 +39,10 @@ CPMAddPackage(
   OPTIONS "FMT_INSTALL YES" # create an installable target
 )
 
-
 CPMAddPackage(
-  GITHUB_REPOSITORY gabime/spdlog 
-  VERSION 1.12.0 
-  OPTIONS "SPDLOG_FMT_EXTERNAL 1" 
+  GITHUB_REPOSITORY gabime/spdlog
+  VERSION 1.12.0
+  OPTIONS "SPDLOG_FMT_EXTERNAL 1"
 )
 # ---- Add source files ----
 
@@ -53,9 +52,8 @@ file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
 
 # ---- Create library ----
-# add_library(Filestorm ${headers} ${sources})
-# Note: for header-only libraries change all PUBLIC flags to INTERFACE and create an interface
-# target: add_library(${PROJECT_NAME} INTERFACE)
+# add_library(Filestorm ${headers} ${sources}) Note: for header-only libraries change all PUBLIC
+# flags to INTERFACE and create an interface target: add_library(${PROJECT_NAME} INTERFACE)
 add_library(lib${PROJECT_NAME} ${headers} ${sources})
 set_target_properties(lib${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 
@@ -67,7 +65,7 @@ target_link_libraries(lib${PROJECT_NAME} PRIVATE fmt::fmt)
 
 target_include_directories(
   lib${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-                         $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
+                            $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
 
 # ---- Create an installable target ----
@@ -89,9 +87,7 @@ packageProject(
   DEPENDENCIES "fmt 10.1.1"
 )
 
-
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
-
 
 add_executable(${PROJECT_NAME} ${standalone_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "Filestorm")
