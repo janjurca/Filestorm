@@ -75,7 +75,7 @@ target_include_directories(
 
 # the location where the project's version header will be placed should match the project's regular
 # header paths
-string(TOLOWER lib${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
+string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
 
 packageProject(
   NAME lib${PROJECT_NAME}
@@ -86,7 +86,7 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "fmt 9.1.0"
+  DEPENDENCIES "fmt 10.1.1"
 )
 
 

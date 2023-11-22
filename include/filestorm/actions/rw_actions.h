@@ -116,13 +116,11 @@ public:
           "WriteAction::work: interval: {}",
           std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count());
 
-      auto file_size = get_file_size();
       auto data = line.get();
       auto block_size = get_block_size();
-      auto time_limit = get_time_limit();
 
       while (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - start_time).count()
-             <= get_interval().count()) {
+             <= get_time_limit().count()) {
         // write(fd, line.get(), get_block_size());
         m_written_bytes += write(fd, data, block_size);
         // now_time = std::chrono::high_resolution_clock::now();

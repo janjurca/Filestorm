@@ -15,7 +15,7 @@ auto main(int argc, char** argv) -> int {
   // print options
   spdlog::set_level(spdlog::level::debug);
   spdlog::debug("Runninf Filestorm with options:");
-  for (size_t i = 0; i < argc; i++) {
+  for (int i = 0; i < argc; i++) {
     spdlog::debug("  {}: {}", i, argv[i]);
   }
 
@@ -35,7 +35,7 @@ auto main(int argc, char** argv) -> int {
   }
 
   if (result["version"].as<bool>()) {
-    std::cout << FILESTORM_VERSION << std::endl;
+    std::cout << LIBFILESTORM_VERSION << std::endl;
     return 0;
   }
 
