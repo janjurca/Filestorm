@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <filestorm/actions/actions.h>
+#include <spdlog/spdlog.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -14,7 +15,6 @@
 #include <random>
 #include <string>
 #include <vector>
-
 // ABOUT DIRECT IO https://github.com/facebook/rocksdb/wiki/Direct-IO
 
 class ReadAction : public VirtualMonitoredAction, public FileActionAttributes {
@@ -59,13 +59,7 @@ public:
     }
   }
 
-  void log_values() override {
-    std::lock_guard<std::mutex> lock(m_monitoredDataMutex);
-    if (m_monitoredData.find("read_bytes") == m_monitoredData.end()) {
-      m_monitoredData["read_bytes"] = std::vector<float>();
-    }
-    m_monitoredData["read_bytes"].push_back(m_read_bytes);
-  }
+  void log_values() override { addMonitoredData("read_bytes", m_read_bytes); }
 };
 
 class WriteAction : public VirtualMonitoredAction, public FileActionAttributes {
@@ -88,6 +82,7 @@ public:
   }
 
   void work() override {
+    spdlog::debug("WriteAction::work: file_path: {}", get_file_path());
     int fd;
     std::unique_ptr<char[]> line(new char[get_block_size()]);
 
@@ -109,17 +104,33 @@ public:
     if (fd == -1) {
       throw std::runtime_error("WriteAction::work: error opening file");
     }
-
+    size_t offset = 0;
+    spdlog::debug("WriteAction::work: file_size: {}", get_file_size());
+    generate_random_chunk(line.get(), get_block_size());
     if (is_time_based()) {
       auto start_time = std::chrono::high_resolution_clock::now();
       auto now_time = std::chrono::high_resolution_clock::now();
+      spdlog::debug("WriteAction::work: start_time: {}", start_time.time_since_epoch().count());
+      spdlog::debug("WriteAction::work: now_time: {}", now_time.time_since_epoch().count());
+      spdlog::debug(
+          "WriteAction::work: interval: {}",
+          std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count());
+
+      auto file_size = get_file_size();
+      auto data = line.get();
+      auto block_size = get_block_size();
+      auto time_limit = get_time_limit();
 
       while (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - start_time).count()
              <= get_interval().count()) {
-        generate_random_chunk(line.get(), get_block_size());
-        write(fd, line.get(), get_block_size());
-        m_written_bytes += get_block_size();
-        now_time = std::chrono::high_resolution_clock::now();
+        // write(fd, line.get(), get_block_size());
+        m_written_bytes += write(fd, data, block_size);
+        // now_time = std::chrono::high_resolution_clock::now();
+        if (m_written_bytes % get_file_size() == 0) {
+          if (lseek(fd, offset, SEEK_SET) != 0) {
+            throw std::runtime_error("WriteAction::work: error on fseek");
+          }
+        }
       }
     } else {
       while (m_written_bytes < get_file_size()) {
@@ -131,11 +142,5 @@ public:
     close(fd);
   }
 
-  void log_values() override {
-    std::lock_guard<std::mutex> lock(m_monitoredDataMutex);
-    if (m_monitoredData.find("written_bytes") == m_monitoredData.end()) {
-      m_monitoredData["written_bytes"] = std::vector<float>();
-    }
-    m_monitoredData["written_bytes"].push_back(m_written_bytes);
-  }
+  void log_values() override { addMonitoredData("write_bytes", m_written_bytes); }
 };

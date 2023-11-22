@@ -1,6 +1,7 @@
 #include <filestorm/actions/actions.h>
 #include <filestorm/actions/rw_actions.h>
 #include <filestorm/version.h>
+#include <spdlog/spdlog.h>
 
 #include <cxxopts.hpp>
 #include <iostream>
@@ -11,12 +12,18 @@
 
 auto main(int argc, char** argv) -> int {
   cxxopts::Options options(*argv, "Filestorm - modern metadata extensive storage benchmaring tool");
+  // print options
+  spdlog::set_level(spdlog::level::debug);
+  spdlog::debug("Runninf Filestorm with options:");
+  for (size_t i = 0; i < argc; i++) {
+    spdlog::debug("  {}: {}", i, argv[i]);
+  }
 
   // clang-format off
   options.add_options()
     ("h,help", "Show help")
     ("v,version", "Print the current version number")
-    ("f,file", "Specify file which should be tested")
+    ("f,file", "File name", cxxopts::value<std::string>())
     ("s,scenario",std::string("Define which testing mode you'd like to run. Supported: ") + config.get_supported_scenarios_as_string(), cxxopts::value<std::string>()->default_value(config.get_supported_scenarios().at(0).name()) )
   ;
 
@@ -37,9 +44,31 @@ auto main(int argc, char** argv) -> int {
     return 1;
   }
 
-  WriteAction wa(std::chrono::milliseconds(100), [](VirtualMonitoredAction* action) {
-    std::cout << "WriteAction: " << action->get_monitored_data().at("write_bytes").at(0) << std::endl;
-  }, FileActionAttributes(true, 4096, 4096*1024,  result["file"].as<std::string>()));
+  auto file = result["file"].as<std::string>();  
+
+  WriteAction wa(std::chrono::milliseconds(1000), [](VirtualMonitoredAction* action) {
+    auto tuple = action->get_monitored_data().at("write_bytes").back();
+    auto duration = std::get<0>(tuple);
+    auto value = std::get<1>(tuple);
+
+    static auto last_value = 0.0f;
+    static auto last_duration = std::chrono::nanoseconds(0);
+
+    auto diff = value - last_value;
+    auto duration_diff = duration - last_duration;
+
+    last_value = value;
+    last_duration = duration;
+
+    auto speed = diff / duration_diff.count(); // bytes per nanosecond
+    auto speed_mb_s = speed * 1000 * 1000 *1000; // bytes per second
+    auto speed_mb = speed_mb_s / 1024 / 1024; // megabytes per second 
+
+    spdlog::debug("WriteAction::on_log: {} {} {}", diff, duration_diff.count(), speed_mb);
+    
+  }, FileActionAttributes(true, 1024*64, 4096*1024*128, file, std::chrono::seconds(10)));
+
+  wa.exec();
 
   return 0;
 }

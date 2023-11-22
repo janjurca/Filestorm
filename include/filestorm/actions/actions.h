@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
+
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -15,18 +17,21 @@ private:
   const unsigned int m_block_size;
   const unsigned int m_file_size;
   const std::string m_file_path;
+  const std::chrono::seconds m_time_limit;
 
 public:
   FileActionAttributes(bool time_based, unsigned int block_size, unsigned int file_size,
-                       std::string file_path)
+                       std::string file_path, std::chrono::seconds time_limit)
       : m_time_based(time_based),
         m_block_size(block_size),
         m_file_size(file_size),
-        m_file_path(file_path) {}
+        m_file_path(file_path),
+        m_time_limit(time_limit) {}
   bool is_time_based() const { return m_time_based; }
   unsigned int get_block_size() const { return m_block_size; }
   unsigned int get_file_size() const { return m_file_size; }
   inline std::string get_file_path() const { return m_file_path; }
+  std::chrono::seconds get_time_limit() const { return m_time_limit; }
 };
 
 class ActionMonitor;
@@ -79,7 +84,7 @@ protected:
   std::chrono::milliseconds m_interval;
   std::atomic<bool> m_running;
   std::thread m_thread;
-  std::map<std::string, std::vector<float>> m_monitoredData;
+  std::map<std::string, std::vector<std::tuple<std::chrono::nanoseconds, float>>> m_monitoredData;
   mutable std::mutex m_monitoredDataMutex;
   std::chrono::nanoseconds m_monitor_started_at;
   // function callback
@@ -98,18 +103,20 @@ public:
   }
 
   void exec() {
+    spdlog::debug("VirtualMonitoredAction::exec");
     start_monitor();
     work();
     stop_monitor();
+    spdlog::debug("VirtualMonitoredAction::exec finished");
   }
 
   virtual void work() { throw "Not implemented"; }
 
   void _log_values() {
+    log_values();
     if (m_on_log) {
       m_on_log(this);
     }
-    log_values();
   }
   virtual void log_values() { throw "Not implemented"; }
 
@@ -122,7 +129,7 @@ public:
       m_thread = std::thread([this]() {
         while (m_running) {
           _log_values();
-          std::this_thread::sleep_for(m_interval);
+          std::this_thread::sleep_for(get_interval());
         }
       });
     }
@@ -139,10 +146,20 @@ public:
 
   void addMonitoredData(std::string name, float value) {
     std::lock_guard<std::mutex> lock(m_monitoredDataMutex);
-    m_monitoredData[name].push_back(value);
+    if (m_monitoredData.find(name) == m_monitoredData.end()) {
+      m_monitoredData[name] = std::vector<std::tuple<std::chrono::nanoseconds, float>>();
+    }
+    auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::high_resolution_clock::now().time_since_epoch());
+    auto duration = now - m_monitor_started_at;
+    auto value_tuple = std::make_tuple(duration, value);
+    m_monitoredData[name].push_back(value_tuple);
   }
 
   std::chrono::milliseconds get_interval() { return m_interval; }
-  std::map<std::string, std::vector<float>> get_monitored_data() { return m_monitoredData; }
+  std::map<std::string, std::vector<std::tuple<std::chrono::nanoseconds, float>>>
+  get_monitored_data() {
+    return m_monitoredData;
+  }
   std::chrono::nanoseconds get_monitor_started_at() { return m_monitor_started_at; }
 };
