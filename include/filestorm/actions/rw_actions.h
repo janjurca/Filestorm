@@ -6,7 +6,11 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
+#if __linux__ || __unix__ || defined(_POSIX_VERSION) || __APPLE__
+#  include <unistd.h>
+#else
+#  error "Unknown system"
+#endif
 
 #include <algorithm>
 #include <chrono>

@@ -3,12 +3,12 @@
 
 # Set up the default target - all, and specify what it should do
 all:
-	cmake -S all -B build
+	cmake -S . -B build
 	cmake --build build
 
 
 run:
-	./build/standalone/Filestorm
+	./build/Filestorm
 
 clean:
 	rm -rf build
