@@ -86,7 +86,7 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "fmt 10.1.0"
+  DEPENDENCIES "fmt 10.1.0" CPACK YES
 )
 
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
@@ -95,3 +95,10 @@ add_executable(${PROJECT_NAME}Executable ${standalone_sources})
 set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "Filestorm")
 
 target_link_libraries(${PROJECT_NAME}Executable ${PROJECT_NAME} cxxopts fmt::fmt spdlog)
+
+# Installation rules for the executable
+install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                                                  COMPONENT "${PROJECT_NAME}_Runtime"
+)
+
+include(CPack)
