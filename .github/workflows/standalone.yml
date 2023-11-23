@@ -25,6 +25,10 @@ jobs:
           path: "**/cpm_modules"
           key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
 
+      - name: install_dependencies
+        run: |
+          dnf install -y cmake gcc-c++ make cxxopts-devel spdlog-devel
+          
       - name: configure
         run: cmake -S . -Bbuild -DCMAKE_BUILD_TYPE=Debug
 
