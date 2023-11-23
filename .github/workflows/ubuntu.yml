@@ -22,8 +22,8 @@ jobs:
     steps:
       - name: install_dependencies
         run: |
-          apt update
-          apt install -y cmake g++ make libcxxopts-dev libspdlog-dev libfmt-dev git
+          sudo apt update
+          sudo apt install -y cmake g++ make libcxxopts-dev libspdlog-dev libfmt-dev git
 
       - uses: actions/checkout@v4
         with:
