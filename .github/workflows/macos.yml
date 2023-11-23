@@ -19,7 +19,13 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: brew install spdlog cxxopts fmt
+        
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: "true"
+          fetch-depth: 0
 
       - uses: actions/cache@v3
         with:
