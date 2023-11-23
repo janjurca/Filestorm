@@ -29,7 +29,8 @@ jobs:
           key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
       
       - name: debug
-        run: ls -la
+        run: git config --global --add safe.directory /__w/Filestorm/Filestorm
+
           
       - name: configure
         run: cmake -S . -Bbuild -DCMAKE_BUILD_TYPE=Debug
