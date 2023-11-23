@@ -27,6 +27,7 @@ jobs:
 
       - name: install_dependencies
         run: |
+          ls -la
           dnf install -y cmake gcc-c++ make cxxopts-devel spdlog-devel git
           
       - name: configure
