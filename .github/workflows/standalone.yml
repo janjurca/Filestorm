@@ -16,7 +16,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: fedora:38
+    container: fedora:latest
     steps:
       - name: install_dependencies
         run: |
