@@ -1,11 +1,13 @@
-cmake_minimum_required(VERSION 3.14...3.22)
+cmake_minimum_required(VERSION 3.25)
 
 # ---- Project ----
 
-# Note: update this to your new project's name and version
+include(cmake/DynamicVersion.cmake)
+dynamic_version(PROJECT_PREFIX Filestorm_)
+
 project(
   Filestorm
-  VERSION 1.0
+  VERSION ${PROJECT_VERSION}
   LANGUAGES CXX
 )
 
