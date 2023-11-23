@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: install_dependencies
+        run: |
+          apt update
+          apt install -y cmake gcc-c++ make cxxopts-devel spdlog-devel git
+
       - uses: actions/checkout@v4
         with:
           fetch-tags: "true"
