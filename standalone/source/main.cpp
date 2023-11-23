@@ -16,7 +16,7 @@ auto main(int argc, char** argv) -> int {
   spdlog::set_level(spdlog::level::debug);
   spdlog::debug("Runninf Filestorm with options:");
   for (int i = 0; i < argc; i++) {
-    spdlog::debug("  {}: {}", i, argv[i]);
+    spdlog::debug(" {}: {}", i, argv[i]);
   }
 
   // clang-format off
