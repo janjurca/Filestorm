@@ -35,7 +35,7 @@ auto main(int argc, char** argv) -> int {
   }
 
   if (result["version"].as<bool>()) {
-    std::cout << LIBFILESTORM_VERSION << std::endl;
+    std::cout << FILESTORM_VERSION << std::endl;
     return 0;
   }
 

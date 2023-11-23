@@ -54,18 +54,18 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/
 # ---- Create library ----
 # add_library(Filestorm ${headers} ${sources}) Note: for header-only libraries change all PUBLIC
 # flags to INTERFACE and create an interface target: add_library(${PROJECT_NAME} INTERFACE)
-add_library(lib${PROJECT_NAME} ${headers} ${sources})
-set_target_properties(lib${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
+add_library(${PROJECT_NAME} ${headers} ${sources})
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 
 # being a cross-platform target, we enforce standards conformance on MSVC
-target_compile_options(lib${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 # Link dependencies
-target_link_libraries(lib${PROJECT_NAME} PRIVATE fmt::fmt)
+target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt)
 
 target_include_directories(
-  lib${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-                            $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
+  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                         $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
 
 # ---- Create an installable target ----
@@ -76,7 +76,7 @@ target_include_directories(
 string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
 
 packageProject(
-  NAME lib${PROJECT_NAME}
+  NAME ${PROJECT_NAME}
   VERSION ${PROJECT_VERSION}
   NAMESPACE ${PROJECT_NAME}
   BINARY_DIR ${PROJECT_BINARY_DIR}
@@ -89,7 +89,7 @@ packageProject(
 
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
 
-add_executable(${PROJECT_NAME} ${standalone_sources})
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "Filestorm")
+add_executable(${PROJECT_NAME}Executable ${standalone_sources})
+set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "Filestorm")
 
-target_link_libraries(${PROJECT_NAME} lib${PROJECT_NAME} cxxopts fmt::fmt spdlog)
+target_link_libraries(${PROJECT_NAME}Executable ${PROJECT_NAME} cxxopts fmt::fmt spdlog)
