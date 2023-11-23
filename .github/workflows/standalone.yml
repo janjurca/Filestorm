@@ -27,8 +27,8 @@ jobs:
 
       - name: install_dependencies
         run: |
-          ls -la
           dnf install -y cmake gcc-c++ make cxxopts-devel spdlog-devel git
+          ls -la
           
       - name: configure
         run: cmake -S . -Bbuild -DCMAKE_BUILD_TYPE=Debug
