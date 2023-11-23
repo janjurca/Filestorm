@@ -15,7 +15,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: fedora-latest
 
     steps:
       - uses: actions/checkout@v3
