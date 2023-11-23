@@ -19,8 +19,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: install_dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake g++ make libcxxopts-dev libspdlog-dev libfmt-dev git
 
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: "true"
+          fetch-depth: 0
+  
       - uses: actions/cache@v3
         with:
           path: "**/cpm_modules"
