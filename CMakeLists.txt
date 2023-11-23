@@ -34,7 +34,7 @@ CPMAddPackage(
 
 CPMAddPackage(
   NAME fmt
-  GIT_TAG 10.1.1
+  GIT_TAG 10.1.0
   GITHUB_REPOSITORY fmtlib/fmt
   OPTIONS "FMT_INSTALL YES" # create an installable target
 )
@@ -84,7 +84,7 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "fmt 10.1.1"
+  DEPENDENCIES "fmt 10.1.0"
 )
 
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
