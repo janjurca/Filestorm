@@ -17,12 +17,12 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: fedora:latest
 
     steps:
       - name: install_dependencies
         run: |
-          sudo apt update
-          sudo apt install -y cmake g++ make libcxxopts-dev libspdlog-dev libfmt-dev git
+          dnf install -y cmake gcc-c++ make cxxopts-devel spdlog-devel git
 
       - uses: actions/checkout@v4
         with:
@@ -37,7 +37,7 @@ jobs:
       - name: build and install library
         run: |
           cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release
-          sudo cmake --build build --target install
+          cmake --build build --target install
           rm -rf build
 
       - name: configure
