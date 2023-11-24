@@ -2,7 +2,7 @@ srpm:
 	dnf -y install cmake gcc-c++ make cxxopts-devel spdlog-devel git
 	mkdir  build
 	cd build && cmake .. && make
-	cpack -G SRPM 
+	cpack -G RPM 
 	echo `ls`
 	rpmfiles=`ls build/filestorm*.rpm`
 	echo $$rpmfiles
