@@ -6,7 +6,7 @@ srpm:
 	echo `ls`
 	rpmfiles=`ls filestorm-*.src.rpm`
 	echo `ls filestorm-*.src.rpm`
-	echo $rpmfiles
+	echo ${rpmfiles}
 	for rpmfile in $$rpmfiles; do \
 		echo $$rpmfile; \
 		cp $$rpmfile $(outdir); \
