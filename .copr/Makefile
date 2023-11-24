@@ -1,13 +1,10 @@
 srpm:
-	dnf -y install cmake gcc-c++ make cxxopts-devel spdlog-devel git
-	mkdir  build
-	cd build && cmake .. && make
-	cpack -G RPM --config build/CPackSourceConfig.cmake
-	echo `ls`
-	rpmfiles=`ls filestorm-*.src.rpm`
-	echo `ls filestorm-*.src.rpm`
-	echo ${rpmfiles}
-	for rpmfile in $$rpmfiles; do \
-		echo $$rpmfile; \
-		cp $$rpmfile $(outdir); \
-	done
+    dnf -y install cmake gcc-c++ make cxxopts-devel spdlog-devel git
+    mkdir -p build
+    cd build && cmake .. && make
+    cpack -G RPM --config build/CPackSourceConfig.cmake
+    echo `ls`
+    for rpmfile in `ls filestorm-*.src.rpm`; do \
+        echo $$rpmfile; \
+        cp $$rpmfile $(outdir); \
+    done
