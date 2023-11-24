@@ -87,4 +87,7 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
                                                   COMPONENT "${PROJECT_NAME}_Runtime"
 )
 
+set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, cxxopts")
+set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++")
+
 include(CPack)
