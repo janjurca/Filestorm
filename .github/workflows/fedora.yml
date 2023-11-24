@@ -34,7 +34,7 @@ jobs:
       
       - name: git safe
         run: | 
-          git config --global --add safe.directory /__w/filestorm/filestorm
+          git config --global --add safe.directory /__w/Filestorm/Filestorm
 
           
       - name: configure
