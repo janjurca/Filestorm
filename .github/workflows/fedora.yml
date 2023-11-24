@@ -34,7 +34,7 @@ jobs:
       
       - name: debug
         run: | 
-          git config --global --add safe.directory /__w/Filestorm/Filestorm
+          git config --global --add safe.directory /__w/filestorm/filestorm
           git tag
 
           
@@ -45,4 +45,4 @@ jobs:
         run: cmake --build build -j4
 
       - name: run
-        run: ./build/Filestorm -h
+        run: ./build/filestorm -h

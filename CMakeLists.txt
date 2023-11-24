@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.25)
 # ---- Project ----
 
 include(cmake/DynamicVersion.cmake)
-dynamic_version(PROJECT_PREFIX Filestorm_)
+dynamic_version(PROJECT_PREFIX filestorm_)
 
 project(
-  Filestorm
+  filestorm
   VERSION ${PROJECT_VERSION}
   LANGUAGES CXX
 )
@@ -40,7 +40,7 @@ file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
 
 # ---- Create library ----
-# add_library(Filestorm ${headers} ${sources}) Note: for header-only libraries change all PUBLIC
+# add_library(filestorm ${headers} ${sources}) Note: for header-only libraries change all PUBLIC
 # flags to INTERFACE and create an interface target: add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME} ${headers} ${sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
@@ -78,7 +78,7 @@ packageProject(
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
 
 add_executable(${PROJECT_NAME}Executable ${standalone_sources})
-set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "Filestorm")
+set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "filestorm")
 
 target_link_libraries(${PROJECT_NAME}Executable ${PROJECT_NAME} fmt::fmt spdlog::spdlog)
 

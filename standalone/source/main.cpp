@@ -11,10 +11,10 @@
 #include "config.h"
 
 auto main(int argc, char** argv) -> int {
-  cxxopts::Options options(*argv, "Filestorm - modern metadata extensive storage benchmaring tool");
+  cxxopts::Options options(*argv, "filestorm - modern metadata extensive storage benchmaring tool");
   // print options
   spdlog::set_level(spdlog::level::debug);
-  spdlog::debug("Runninf Filestorm with options:");
+  spdlog::debug("Runninf filestorm with options:");
   for (int i = 0; i < argc; i++) {
     spdlog::debug(" {}: {}", i, argv[i]);
   }

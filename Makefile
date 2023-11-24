@@ -8,7 +8,7 @@ all:
 
 
 run:
-	./build/Filestorm
+	./build/filestorm
 
 clean:
 	rm -rf build
