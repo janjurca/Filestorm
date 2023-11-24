@@ -1,4 +1,4 @@
-name: Standalone
+name: fedora
 
 on:
   push:
@@ -32,12 +32,6 @@ jobs:
           path: "**/cpm_modules"
           key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
       
-      - name: debug
-        run: | 
-          git config --global --add safe.directory /__w/filestorm/filestorm
-          git tag
-
-          
       - name: configure
         run: cmake -S . -Bbuild -DCMAKE_BUILD_TYPE=Debug
 
