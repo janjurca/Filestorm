@@ -3,7 +3,7 @@ srpm:
 	mkdir  build
 	cd build && cmake .. && make && cpack -G RPM 
 	echo `ls`
-	rpmfiles=`ls filestorm*.rpm`
+	rpmfiles=`ls build/filestorm*.rpm`
 	echo $$rpmfiles
 	for rpmfile in $$rpmfiles; do \
 		echo $$rpmfile; \
