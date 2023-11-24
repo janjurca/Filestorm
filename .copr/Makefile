@@ -4,7 +4,8 @@ srpm:
 	cd build && cmake .. && make
 	cpack -G RPM --config build/CPackSourceConfig.cmake
 	echo `ls`
-	rpmfiles=`ls filestorm*.rpm`
+	rpmfiles=`ls filestorm-*.src.rpm`
+	echo `ls filestorm-*.src.rpm`
 	echo $$rpmfiles
 	for rpmfile in $$rpmfiles; do \
 		echo $$rpmfile; \
