@@ -3,6 +3,7 @@ srpm:
 	mkdir  build
 	cd build && cmake .. && make && cpack -G RPM 
 	rpmfiles=`ls build/filestorm*.rpm`
+	echo $$rpmfiles
 	if [ -z "$$rpmfiles" ]; then \
 		echo "No RPM files found"; \
 		exit 1; \
