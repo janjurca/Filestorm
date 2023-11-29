@@ -28,7 +28,6 @@ include(cmake/CPM.cmake)
 # PackageProject.cmake will be used to make our target installable
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.11.1")
 
-find_package(cxxopts REQUIRED)
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 
@@ -72,7 +71,7 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "spdlog;fmt;cxxopts" CPACK YES
+  DEPENDENCIES "spdlog;fmt" CPACK YES
 )
 
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
@@ -87,7 +86,7 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
                                                   COMPONENT "${PROJECT_NAME}_Runtime"
 )
 
-set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, cxxopts")
-set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, cxxopts-devel, git")
+set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
+set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, git")
 
 include(CPack)

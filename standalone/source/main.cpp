@@ -3,7 +3,7 @@
 #include <filestorm/version.h>
 #include <spdlog/spdlog.h>
 
-#include <cxxopts.hpp>
+#include <filestorm/cxxopts.hpp>
 #include <iostream>
 #include <string>
 #include <unordered_map>

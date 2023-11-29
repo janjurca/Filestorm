@@ -1,7 +1,7 @@
 CMAKELISTS_FILE := CMakeLists.txt
 
 srpm:
-	dnf -y install cmake gcc-c++ make cxxopts-devel spdlog-devel git
+	dnf -y install cmake gcc-c++ make spdlog-devel git
 	mkdir -p build
 	make
 	@VERSION_STRING=$$(cat build/.version); \
