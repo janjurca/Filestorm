@@ -121,15 +121,43 @@ function(dynamic_version)
   # Normalize DynamicVersion_ARGS to be passed as string
   list(JOIN DynamicVersion_ARGS "\\;" DynamicVersion_ARGS)
 
-  # Execute get_dynamic_version once to know the current configuration
-  execute_process(
-    COMMAND
-      ${CMAKE_COMMAND} -DDynamicVersion_RUN:BOOL=True
-      # Note: DynamicVersion_ARGS cannot be escaped with ""
-      -DDynamicVersion_ARGS:STRING=${DynamicVersion_ARGS} -P ${CMAKE_CURRENT_FUNCTION_LIST_FILE}
-      COMMAND_ERROR_IS_FATAL ANY
-  )
+  # Check if .version file exists and use it if so
+  set(SKIP_AUTOGENERATION False)
+  if(EXISTS ".version")
+    file(READ ".version" custom_version)
+    message(WARNING "DynamicVersion: Using version from .version file: ${custom_version}")
+    # set fallback version in ARGS_FALLBACK_VERSION variable
+    set(ARGS_FALLBACK_VERSION ${custom_version})
+    set(ARGS_FALLBACK_HASH "custom")
+    set(SKIP_AUTOGENERATION True)
+  endif()
 
+  if(SKIP_AUTOGENERATION)
+    # Write the version file
+    file(WRITE ${ARGS_TMP_FOLDER}/.version ${ARGS_FALLBACK_VERSION})
+    file(WRITE ${ARGS_TMP_FOLDER}/.git_commit ${ARGS_FALLBACK_HASH})
+    # Create the JSON content using the variables
+    set(JSON_CONTENT "{\n")
+    set(JSON_CONTENT "${JSON_CONTENT}  \"allow-fails\" : false,\n")
+    set(JSON_CONTENT "${JSON_CONTENT}  \"commit\" : \"${ARGS_FALLBACK_HASH}\",\n")
+    set(JSON_CONTENT
+        "${JSON_CONTENT}  \"describe\" : \"v${ARGS_FALLBACK_VERSION}-${ARGS_FALLBACK_HASH}\",\n"
+    )
+    set(JSON_CONTENT "${JSON_CONTENT}  \"failed\" : false,\n")
+    set(JSON_CONTENT "${JSON_CONTENT}  \"version\" : \"${ARGS_FALLBACK_VERSION}\"\n}")
+    set(JSON_CONTENT "${JSON_CONTENT}")
+    # Write the JSON content to the file
+    file(WRITE ${ARGS_TMP_FOLDER}/.DynamicVersion.json ${JSON_CONTENT})
+  else()
+    # Execute get_dynamic_version once to know the current configuration
+    execute_process(
+      COMMAND
+        ${CMAKE_COMMAND} -DDynamicVersion_RUN:BOOL=True
+        # Note: DynamicVersion_ARGS cannot be escaped with ""
+        -DDynamicVersion_ARGS:STRING=${DynamicVersion_ARGS} -P ${CMAKE_CURRENT_FUNCTION_LIST_FILE}
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+  endif()
   # Copy all configured files
   foreach(file IN ITEMS .DynamicVersion.json .version .git_describe .git_commit)
     if(EXISTS ${file})
@@ -272,16 +300,6 @@ function(get_dynamic_version)
     string(JSON data SET ${data} allow-fails true)
   else()
     string(JSON data SET ${data} allow-fails false)
-  endif()
-
-  # Check if .version file exists and use it if so
-  if(EXISTS ".version")
-    file(READ ".version" custom_version)
-    message(WARNING "DynamicVersion: Using version from .version file: ${custom_version}")
-    # set fallback version in ARGS_FALLBACK_VERSION variable
-    set(ARGS_FALLBACK_VERSION ${custom_version})
-    set(ARGS_FALLBACK_HASH "custom")
-    set(SKIP_AUTOGENERATION True)
   endif()
 
   # Set fallback values
