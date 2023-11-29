@@ -1,8 +1,13 @@
+CMAKELISTS_FILE := CMakeLists.txt
+
 srpm:
 	dnf -y install cmake gcc-c++ make cxxopts-devel spdlog-devel git
 	mkdir -p build
 	make
-	cp build/.version .version
+	@VERSION_STRING=$$(cat build/.version); \
+	sed -i 's/\$${PROJECT_VERSION}/'$$VERSION_STRING'/g' $(CMAKELISTS_FILE); \
+	sed -i '/include(cmake\/DynamicVersion\.cmake)/d' $(CMAKELISTS_FILE); \
+	sed -i '/dynamic_version(PROJECT_PREFIX filestorm_)/d' $(CMAKELISTS_FILE)
 	make clean
 	mkdir -p build
 	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
