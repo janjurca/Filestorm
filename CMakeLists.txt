@@ -88,6 +88,6 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
 )
 
 set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, cxxopts")
-set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, cxxopts-devel")
+set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, cxxopts-devel, git")
 
 include(CPack)
