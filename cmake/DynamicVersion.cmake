@@ -123,8 +123,8 @@ function(dynamic_version)
 
   # Check if .version file exists and use it if so
   set(SKIP_AUTOGENERATION False)
-  if(EXISTS ".version")
-    file(READ ".version" custom_version)
+  if(EXISTS CMAKE_SOURCE_DIR/.version)
+    file(READ CMAKE_SOURCE_DIR/.version custom_version)
     message(WARNING "DynamicVersion: Using version from .version file: ${custom_version}")
     # set fallback version in ARGS_FALLBACK_VERSION variable
     set(ARGS_FALLBACK_VERSION ${custom_version})
