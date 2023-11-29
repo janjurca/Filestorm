@@ -1,4 +1,6 @@
+FROM https://github.com/LecrisUT/CMakeExtraUtils/tree/main
 # [`DynamicVersion.cmake`](DynamicVersion.cmake)
+
 
 Calculate the project version from the git tags or `.git_archival.txt` if the source is not a git repository
 

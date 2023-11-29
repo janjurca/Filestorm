@@ -178,7 +178,8 @@ function(dynamic_version)
     add_custom_target(
       ${ARGS_PROJECT_PREFIX}DynamicVersion ALL
       BYPRODUCTS ${ARGS_TMP_FOLDER}/.DynamicVersion.json ${ARGS_TMP_FOLDER}/.git_describe
-                 ${ARGS_TMP_FOLDER}/.version
+                 ${ARGS_TMP_FOLDER}/.version ${ARGS_TMP_FOLDER}/.git_commit
+                 ${ARGS_TMP_FOLDER}/.n_commit
       COMMAND
         ${CMAKE_COMMAND} -DDynamicVersion_RUN:BOOL=True
         # Note: For some reason DynamicVersion_ARGS needs "" here, but it doesn't in execute_process
@@ -273,16 +274,34 @@ function(get_dynamic_version)
     string(JSON data SET ${data} allow-fails false)
   endif()
 
+  # Check if .version file exists and use it if so
+  if(EXISTS ".version")
+    file(READ ".version" custom_version)
+    message(WARNING "DynamicVersion: Using version from .version file: ${custom_version}")
+    # set fallback version in ARGS_FALLBACK_VERSION variable
+    set(ARGS_FALLBACK_VERSION ${custom_version})
+    set(ARGS_FALLBACK_HASH "custom")
+    set(SKIP_AUTOGENERATION True)
+  endif()
+
   # Set fallback values
   if(DEFINED ARGS_FALLBACK_VERSION)
+    message(WARNING "DynamicVersion: Using fallback version: ${ARGS_FALLBACK_VERSION}")
     string(JSON data SET ${data} version ${ARGS_FALLBACK_VERSION})
     file(WRITE ${ARGS_TMP_FOLDER}/.DynamicVersion.json ${data})
     file(WRITE ${ARGS_TMP_FOLDER}/.version ${ARGS_FALLBACK_VERSION})
   endif()
   if(DEFINED ARGS_FALLBACK_HASH)
-    string(JSON data SET ${data} commit ${ARGS_FALLBACK_HASH})
+    message(WARNING "DynamicVersion: Using fallback hash: ${ARGS_FALLBACK_HASH}")
+    # TODO We should probably dont ignore this string(JSON data SET ${data} commit
+    # ${ARGS_FALLBACK_HASH})
     file(WRITE ${ARGS_TMP_FOLDER}/.DynamicVersion.json ${data})
     file(WRITE ${ARGS_TMP_FOLDER}/.git_commit ${ARGS_FALLBACK_HASH})
+  endif()
+
+  if(DEFINED SKIP_AUTOGENERATION)
+    # If SKIP_AUTOGENERATION is defined, we are done
+    return()
   endif()
 
   if(NOT EXISTS ${ARGS_GIT_ARCHIVAL_FILE})
@@ -305,13 +324,17 @@ function(get_dynamic_version)
   endif()
 
   # Try to get the version tag of the form `vX.Y.Z` or `X.Y.Z` (with arbitrary suffix)
-  if(describe-name MATCHES "^describe-name:[ ]?([v]?([0-9\\.]+).*)")
+  if(describe-name MATCHES "^describe-name:[ ]?([v]?([0-9\\.]+)-([0-9]*).*)")
     # First matched group is the full `git describe` of the latest tag Second matched group is only
     # the version, i.e. `X.Y.Z`
+
     string(JSON data SET ${data} describe \"${CMAKE_MATCH_1}\")
     file(WRITE ${ARGS_TMP_FOLDER}/.git_describe ${CMAKE_MATCH_1})
-    string(JSON data SET ${data} version \"${CMAKE_MATCH_2}\")
-    file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2})
+    string(JSON data SET ${data} version \"${CMAKE_MATCH_2}.${CMAKE_MATCH_3}\")
+    file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2}.${CMAKE_MATCH_3})
+    # Third matched group is the number of commits since the latest tag
+    string(JSON data SET ${data} n_commit \"${CMAKE_MATCH_3}\")
+    file(WRITE ${ARGS_TMP_FOLDER}/.n_commit ${CMAKE_MATCH_3})
     # Get commit hash
     file(STRINGS ${ARGS_GIT_ARCHIVAL_FILE} node REGEX "^node:[ ]?(.*)")
     string(JSON data SET ${data} commit \"${CMAKE_MATCH_1}\")
@@ -349,7 +372,7 @@ function(get_dynamic_version)
       OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY
     )
     # Match any part containing digits and periods (strips out rc and so on)
-    if(NOT describe-name MATCHES "^([v]?([0-9\\.]+).*)")
+    if(NOT describe-name MATCHES "^([v]?([0-9\\.]+)-([0-9]*).*)")
       message(${error_message_type} "DynamicVersion: Version tag is ill-formatted\n"
               "  Describe-name: ${describe-name}"
       )
@@ -357,8 +380,10 @@ function(get_dynamic_version)
     endif()
     string(JSON data SET ${data} describe \"${CMAKE_MATCH_1}\")
     file(WRITE ${ARGS_TMP_FOLDER}/.git_describe ${CMAKE_MATCH_1})
-    string(JSON data SET ${data} version \"${CMAKE_MATCH_2}\")
-    file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2})
+    string(JSON data SET ${data} version \"${CMAKE_MATCH_2}.${CMAKE_MATCH_3}\")
+    file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2}.${CMAKE_MATCH_3})
+    string(JSON data SET ${data} n_commit \"${CMAKE_MATCH_3}\")
+    file(WRITE ${ARGS_TMP_FOLDER}/.n_commit ${CMAKE_MATCH_3})
     string(JSON data SET ${data} commit \"${git-hash}\")
     file(WRITE ${ARGS_TMP_FOLDER}/.git_commit ${git-hash})
     message(DEBUG "DynamicVersion: Found appropriate tag from git")
