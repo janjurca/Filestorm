@@ -45,3 +45,13 @@ jobs:
 
       - name: run
         run: ./build/filestorm -h
+
+  trigger-copr-build:
+    needs: build
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Trigger COPR build
+        run: |
+          curl -X POST -H 'Content-Type: application/json' ${{ secrets.COPR_WEBHOOK_URL }}
+      
