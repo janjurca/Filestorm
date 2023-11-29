@@ -301,6 +301,7 @@ function(get_dynamic_version)
 
   if(DEFINED SKIP_AUTOGENERATION)
     # If SKIP_AUTOGENERATION is defined, we are done
+    message(WARNING "DynamicVersion: Skipping autogeneration of version")
     return()
   endif()
 
