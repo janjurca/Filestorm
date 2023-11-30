@@ -1,74 +1,120 @@
 #pragma once
+#include <cstdint>
+#include <iostream>
 
-template <typename T> class DataSize {
+enum class DataUnit : uint64_t {
+  B = 1,
+  KB = 1024,
+  MB = 1048576,
+  GB = 1073741824,
+  TB = 1099511627776,
+  PB = 1125899906842624,
+};
+
+template <DataUnit T> class DataSize {
 private:
-  T m_value;  // NOLINT
+  uint64_t m_value;  // NOLINT
+  bool m_allow_rounding;
 
 public:
-  enum class Unit {
-    B = 1,
-    KB = 1024,
-    MB = 1024 * 1024,
-    GB = 1024 * 1024 * 1024,
-    TB = 1024 * 1024 * 1024 * 1024,
-    PB = 1024 * 1024 * 1024 * 1024 * 1024,
-    EB = 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
-    ZB = 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
-    YB = 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024
-  };
+  DataSize(uint64_t value, bool allow_rounding = false)
+      : m_value(value), m_allow_rounding(allow_rounding) {}
 
-  DataSize(T value) : m_value(value) {}
+  uint64_t get_value() const { return m_value; }
 
-  T get_value() const { return m_value; }
+  // Arithmetic operators handling different units
+  template <DataUnit U> DataSize<T> operator+(const DataSize<U> &rhs) const {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    return DataSize<T>(m_value + converted_rhs);
+  }
 
-  DataSize<T> operator+(const DataSize<T> &rhs) const { return DataSize<T>(m_value + rhs.m_value); }
+  template <DataUnit U> DataSize<T> operator-(const DataSize<U> &rhs) const {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    return DataSize<T>(m_value - converted_rhs);
+  }
+  template <DataUnit U> DataSize<T> operator*(const DataSize<U> &rhs) const {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    return DataSize<T>(m_value * converted_rhs);
+  }
 
-  DataSize<T> operator-(const DataSize<T> &rhs) const { return DataSize<T>(m_value - rhs.m_value); }
+  template <DataUnit U> DataSize<T> operator/(const DataSize<U> &rhs) const {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    return DataSize<T>(m_value / converted_rhs);
+  }
 
-  DataSize<T> operator*(const DataSize<T> &rhs) const { return DataSize<T>(m_value * rhs.m_value); }
+  template <DataUnit U> DataSize<T> operator%(const DataSize<U> &rhs) const {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    return DataSize<T>(m_value % converted_rhs);
+  }
 
-  DataSize<T> operator/(const DataSize<T> &rhs) const { return DataSize<T>(m_value / rhs.m_value); }
-
-  DataSize<T> operator%(const DataSize<T> &rhs) const { return DataSize<T>(m_value % rhs.m_value); }
-
-  DataSize<T> operator+=(const DataSize<T> &rhs) {
-    m_value += rhs.m_value;
+  template <DataUnit U> DataSize<T> operator+=(const DataSize<U> &rhs) {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    m_value += converted_rhs;
     return *this;
   }
 
-  DataSize<T> operator-=(const DataSize<T> &rhs) {
-    m_value -= rhs.m_value;
+  template <DataUnit U> DataSize<T> operator-=(const DataSize<U> &rhs) {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    m_value -= converted_rhs;
     return *this;
   }
 
-  DataSize<T> operator*=(const DataSize<T> &rhs) {
-    m_value *= rhs.m_value;
+  template <DataUnit U> DataSize<T> operator*=(const DataSize<U> &rhs) {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    m_value *= converted_rhs;
     return *this;
   }
 
-  DataSize<T> operator/=(const DataSize<T> &rhs) {
-    m_value /= rhs.m_value;
+  template <DataUnit U> DataSize<T> operator/=(const DataSize<U> &rhs) {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    m_value /= converted_rhs;
     return *this;
   }
 
-  DataSize<T> operator%=(const DataSize<T> &rhs) {
-    m_value %= rhs.m_value;
+  template <DataUnit U> DataSize<T> operator%=(const DataSize<U> &rhs) {
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();
+    m_value %= converted_rhs;
     return *this;
   }
+  template <DataUnit U> bool operator==(const DataSize<U> &rhs) const {
+    return m_value == rhs.template convert<T>().get_value();
+  }
 
-  bool operator==(const DataSize<T> &rhs) const { return m_value == rhs.m_value; }
+  template <DataUnit U> bool operator!=(const DataSize<U> &rhs) const {
+    return m_value != rhs.template convert<T>().get_value();
+  }
 
-  bool operator!=(const DataSize<T> &rhs) const { return m_value != rhs.m_value; }
+  template <DataUnit U> bool operator<(const DataSize<U> &rhs) const {
+    return m_value < rhs.template convert<T>().get_value();
+  }
 
-  bool operator<(const DataSize<T> &rhs) const { return m_value < rhs.m_value; }
+  template <DataUnit U> bool operator>(const DataSize<U> &rhs) const {
+    return m_value > rhs.template convert<T>().get_value();
+  }
 
-  bool operator>(const DataSize<T> &rhs) const { return m_value > rhs.m_value; }
+  template <DataUnit U> bool operator<=(const DataSize<U> &rhs) const {
+    return m_value <= rhs.template convert<T>().get_value();
+  }
 
-  bool operator<=(const DataSize<T> &rhs) const { return m_value <= rhs.m_value; }
+  template <DataUnit U> bool operator>=(const DataSize<U> &rhs) const {
+    return m_value >= rhs.template convert<T>().get_value();
+  }
 
-  bool operator>=(const DataSize<T> &rhs) const { return m_value >= rhs.m_value; }
+  template <DataUnit NewDataUnit> DataSize<NewDataUnit> convert() const {
+    // std::cout << "m_value: " << m_value << " T: " << static_cast<uint64_t>(T)
+    //           << " NewDataUnit: " << static_cast<uint64_t>(NewDataUnit)
+    //           << " m_value * static_cast<uint64_t>(T) / static_cast<uint64_t>(NewDataUnit): "
+    //           << m_value * static_cast<uint64_t>(T) / static_cast<uint64_t>(NewDataUnit)
+    //           << " m_value % static_cast<uint64_t>(NewDataUnit): "
+    //           << m_value % static_cast<uint64_t>(NewDataUnit) << "\n";
 
-  template <typename U> DataSize<U> convert_to(DataSize<U>::Unit unit) const {
-    return DataSize<U>(static_cast<U>(m_value) / static_cast<U>(unit));
+    if (static_cast<uint64_t>(T) < static_cast<uint64_t>(NewDataUnit)
+        && (m_value * static_cast<uint64_t>(T)) % static_cast<uint64_t>(NewDataUnit) != 0
+        && !m_allow_rounding) {
+      throw std::runtime_error("Cannot convert to a bigger unit with a remainder");
+    }
+
+    return DataSize<NewDataUnit>(
+        m_value * static_cast<uint64_t>(T) / static_cast<uint64_t>(NewDataUnit), m_allow_rounding);
   }
 };

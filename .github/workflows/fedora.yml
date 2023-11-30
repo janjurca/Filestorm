@@ -45,9 +45,35 @@ jobs:
 
       - name: run
         run: ./build/filestorm -h
+  
+  tests:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: install_dependencies
+        run: |
+          dnf install -y cmake gcc-c++ make spdlog-devel git
 
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: "true"
+          fetch-depth: 0
+
+      - uses: actions/cache@v3
+        with:
+          path: "**/cpm_modules"
+          key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+      
+      - name: git safe
+        run: | 
+          git config --global --add safe.directory /__w/Filestorm/Filestorm
+          
+      - name: configure
+        run: make tests
+
+  
   trigger-copr-build:
-    needs: build
+    needs: [build, tests] 
     runs-on: ubuntu-latest
     if: success()
     steps:
