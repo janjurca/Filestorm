@@ -1,4 +1,6 @@
 #pragma once
+#include <fmt/core.h>  // or #include <fmt/format.h> based on your fmt version
+
 #include <cstdint>
 #include <iostream>
 
@@ -101,13 +103,6 @@ public:
   }
 
   template <DataUnit NewDataUnit> DataSize<NewDataUnit> convert() const {
-    // std::cout << "m_value: " << m_value << " T: " << static_cast<uint64_t>(T)
-    //           << " NewDataUnit: " << static_cast<uint64_t>(NewDataUnit)
-    //           << " m_value * static_cast<uint64_t>(T) / static_cast<uint64_t>(NewDataUnit): "
-    //           << m_value * static_cast<uint64_t>(T) / static_cast<uint64_t>(NewDataUnit)
-    //           << " m_value % static_cast<uint64_t>(NewDataUnit): "
-    //           << m_value % static_cast<uint64_t>(NewDataUnit) << "\n";
-
     if (static_cast<uint64_t>(T) < static_cast<uint64_t>(NewDataUnit)
         && (m_value * static_cast<uint64_t>(T)) % static_cast<uint64_t>(NewDataUnit) != 0
         && !m_allow_rounding) {
@@ -116,5 +111,41 @@ public:
 
     return DataSize<NewDataUnit>(
         m_value * static_cast<uint64_t>(T) / static_cast<uint64_t>(NewDataUnit), m_allow_rounding);
+  }
+};
+
+template <DataUnit T> struct fmt::formatter<DataSize<T>> {
+  // parse is required by the fmt library
+  constexpr auto parse(fmt::format_parse_context &ctx) -> decltype(ctx.begin()) {
+    return ctx.begin();  // No special parsing needed in this case
+  }
+
+  // This is where you define how to format DataSize
+  template <typename FormatContext> auto format(const DataSize<T> &size, FormatContext &ctx)
+      -> decltype(ctx.out()) {
+    std::string unit;
+    switch (T) {
+      case DataUnit::B:
+        unit = "B";
+        break;
+      case DataUnit::KB:
+        unit = "KB";
+        break;
+      case DataUnit::MB:
+        unit = "MB";
+        break;
+      case DataUnit::GB:
+        unit = "GB";
+        break;
+      case DataUnit::TB:
+        unit = "TB";
+        break;
+      case DataUnit::PB:
+        unit = "PB";
+        break;
+      default:
+        throw std::runtime_error("Unknown data unit");
+    }
+    return fmt::format_to(ctx.out(), "{} {}", size.get_value(), unit);
   }
 };

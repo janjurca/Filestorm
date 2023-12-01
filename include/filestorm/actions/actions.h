@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filestorm/data_sizes.h>
 #include <spdlog/spdlog.h>
 
 #include <atomic>
@@ -14,22 +15,23 @@
 class FileActionAttributes {
 private:
   const bool m_time_based;
-  const unsigned int m_block_size;
-  const unsigned int m_file_size;
+  const DataSize<DataUnit::B> m_block_size;
+  const DataSize<DataUnit::KB> m_file_size;
   const std::string m_file_path;
   const std::chrono::seconds m_time_limit;
 
 public:
-  FileActionAttributes(bool time_based, unsigned int block_size, unsigned int file_size,
-                       std::string file_path, std::chrono::seconds time_limit)
+  FileActionAttributes(bool time_based, DataSize<DataUnit::B> block_size,
+                       DataSize<DataUnit::KB> file_size, std::string file_path,
+                       std::chrono::seconds time_limit)
       : m_time_based(time_based),
         m_block_size(block_size),
         m_file_size(file_size),
         m_file_path(file_path),
         m_time_limit(time_limit) {}
   bool is_time_based() const { return m_time_based; }
-  unsigned int get_block_size() const { return m_block_size; }
-  unsigned int get_file_size() const { return m_file_size; }
+  DataSize<DataUnit::B> get_block_size() const { return m_block_size; }
+  DataSize<DataUnit::KB> get_file_size() const { return m_file_size; }
   inline std::string get_file_path() const { return m_file_path; }
   std::chrono::seconds get_time_limit() const { return m_time_limit; }
 };
