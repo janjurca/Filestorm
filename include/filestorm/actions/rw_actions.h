@@ -23,7 +23,7 @@
 
 class ReadAction : public VirtualMonitoredAction, public FileActionAttributes {
 protected:
-  long long m_read_bytes = 0;
+  u_int64_t m_read_bytes = 0;
 
   inline off_t get_offset() {
     static off_t offset = 0;
@@ -69,7 +69,6 @@ public:
       throw std::runtime_error(
           fmt::format("{}::work: error opening file: {}", typeid(*this).name(), strerror(errno)));
     }
-    size_t offset = 0;
     spdlog::debug("{}::work: file_size: {}", typeid(*this).name(), get_file_size());
 
     if (is_time_based()) {
@@ -105,7 +104,6 @@ private:
   std::vector<off_t> m_offsets;
 
   inline off_t get_offset() {
-    static off_t offset = 0;
     static off_t block_size_bytes = get_block_size().convert<DataUnit::B>().get_value();
     static ssize_t file_size_bytes = get_file_size().convert<DataUnit::B>().get_value();
 
@@ -127,7 +125,7 @@ private:
 
 class WriteAction : public VirtualMonitoredAction, public FileActionAttributes {
 protected:
-  long long m_written_bytes = 0;
+  u_int64_t m_written_bytes = 0;
 
   inline off_t get_offset() {
     static off_t offset = 0;
@@ -178,7 +176,7 @@ public:
     if (fd == -1) {
       throw std::runtime_error("WriteAction::work: error opening file");
     }
-    size_t offset = 0;
+
     spdlog::debug("{}::work: file_size: {}", typeid(*this).name(), get_file_size());
     generate_random_chunk(line.get(), get_block_size().convert<DataUnit::B>().get_value());
     if (is_time_based()) {
@@ -216,7 +214,6 @@ private:
   std::vector<off_t> m_offsets;
 
   inline off_t get_offset() {
-    static off_t offset = 0;
     static off_t block_size_bytes = get_block_size().convert<DataUnit::B>().get_value();
     static ssize_t file_size_bytes = get_file_size().convert<DataUnit::B>().get_value();
 
