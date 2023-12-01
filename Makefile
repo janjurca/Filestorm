@@ -15,8 +15,15 @@ tests:
 	cmake --build build -j4
 	cd build; ctest --build-config Debug
 
+rpm:
+	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+	cd build; cpack -G RPM
+
+srpm:
+	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+	cd build; cpack -G RPM --config CPackSourceConfig.cmake
 
 clean:
 	rm -rf build
 
-.PHONY: all clean tests
+.PHONY: all clean tests rpm run

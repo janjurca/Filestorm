@@ -88,5 +88,7 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
 
 set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
 set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, git")
+set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
 
 include(CPack)
