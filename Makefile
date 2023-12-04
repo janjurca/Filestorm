@@ -2,10 +2,13 @@
 # Makefile
 
 # Set up the default target - all, and specify what it should do
-all:
+all: build
+	
+cmake:
 	cmake -S . -B build
-	cmake --build build
 
+build: cmake
+	cmake --build build
 
 run:
 	./build/filestorm
@@ -26,4 +29,4 @@ srpm:
 clean:
 	rm -rf build
 
-.PHONY: all clean tests rpm run
+.PHONY: all clean tests rpm run cmake build srpm

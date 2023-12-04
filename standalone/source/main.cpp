@@ -1,5 +1,6 @@
 #include <filestorm/actions/actions.h>
 #include <filestorm/actions/rw_actions.h>
+#include <filestorm/data_sizes.h>
 #include <filestorm/version.h>
 #include <spdlog/spdlog.h>
 
@@ -66,7 +67,7 @@ auto main(int argc, char** argv) -> int {
 
     spdlog::debug("WriteAction::on_log: {} {} {}", diff, duration_diff.count(), speed_mb);
     
-  }, FileActionAttributes(true, 1024*64, 4096*1024*128, file, std::chrono::seconds(10)));
+  }, FileActionAttributes(true, DataSize<DataUnit::KB>(64), DataSize<DataUnit::GB>(3) , file, std::chrono::seconds(10)));
 
   wa.exec();
 

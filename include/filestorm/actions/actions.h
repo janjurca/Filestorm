@@ -84,7 +84,7 @@ std::chrono::nanoseconds VirtualMeasuredAction::getLastDuration() {
 class VirtualMonitoredAction {
 protected:
   std::chrono::milliseconds m_interval;
-  std::atomic<bool> m_running;
+  std::atomic<bool> m_running = false;
   std::thread m_thread;
   std::map<std::string, std::vector<std::tuple<std::chrono::nanoseconds, float>>> m_monitoredData;
   mutable std::mutex m_monitoredDataMutex;
@@ -125,16 +125,19 @@ public:
   void start_monitor() {
     m_monitor_started_at = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::high_resolution_clock::now().time_since_epoch());
-
+    spdlog::debug("VirtualMonitoredAction::start_monitor started at: {}",
+                  m_monitor_started_at.count());
     if (!m_running) {
       m_running = true;
       m_thread = std::thread([this]() {
         while (m_running) {
+          spdlog::debug("VirtualMonitoredAction::start_monitor: logging values");
           _log_values();
           std::this_thread::sleep_for(get_interval());
         }
       });
     }
+    spdlog::debug("VirtualMonitoredAction::start_monitor finished");
   }
 
   void stop_monitor() {

@@ -22,6 +22,12 @@ public:
   DataSize(uint64_t value, bool allow_rounding = false)
       : m_value(value), m_allow_rounding(allow_rounding) {}
 
+  // Converting constructor
+  template <DataUnit U> DataSize(const DataSize<U> &other, bool allow_rounding = false)
+      : m_allow_rounding(allow_rounding || other.allow_rounding()) {
+    *this = other.template convert<T>();
+  }
+
   uint64_t get_value() const { return m_value; }
 
   // Arithmetic operators handling different units
@@ -112,6 +118,8 @@ public:
     return DataSize<NewDataUnit>(
         m_value * static_cast<uint64_t>(T) / static_cast<uint64_t>(NewDataUnit), m_allow_rounding);
   }
+
+  bool allow_rounding() const { return m_allow_rounding; }
 };
 
 template <DataUnit T> struct fmt::formatter<DataSize<T>> {

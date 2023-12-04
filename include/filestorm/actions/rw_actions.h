@@ -12,10 +12,17 @@
 #  error "Unknown system"
 #endif
 
+#include <fcntl.h>     // for open
+#include <sys/stat.h>  // for S_IRWXU
+#include <unistd.h>    // for close
+
 #include <algorithm>
+#include <cerrno>  // for errno
 #include <chrono>
+#include <cstring>  // for strerror
 #include <fstream>
-#include <memory>  // for std::unique_ptr
+#include <iostream>  // for std::cerr
+#include <memory>    // for std::unique_ptr
 #include <random>
 #include <string>
 #include <vector>
@@ -134,6 +141,7 @@ protected:
 
     offset += block_size_bytes;
     if (m_written_bytes % file_size_bytes == 0) {
+      spdlog::debug("{}::get_offset: resetting offset", typeid(*this).name());
       offset = 0;
     }
     return offset;
@@ -174,6 +182,7 @@ public:
 #endif
 
     if (fd == -1) {
+      std::cerr << "Error opening file: " << strerror(errno) << std::endl;
       throw std::runtime_error("WriteAction::work: error opening file");
     }
 
@@ -192,8 +201,9 @@ public:
       size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
 
       while (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - start_time).count()
-             <= get_time_limit().count()) {
+             <= std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count()) {
         m_written_bytes += pwrite(fd, data, block_size, get_offset());
+        now_time = std::chrono::high_resolution_clock::now();
       }
     } else {
       size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
