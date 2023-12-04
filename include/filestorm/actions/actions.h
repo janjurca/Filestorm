@@ -131,7 +131,6 @@ public:
       m_running = true;
       m_thread = std::thread([this]() {
         while (m_running) {
-          spdlog::debug("VirtualMonitoredAction::start_monitor: logging values");
           _log_values();
           std::this_thread::sleep_for(get_interval());
         }

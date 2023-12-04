@@ -65,7 +65,7 @@ auto main(int argc, char** argv) -> int {
     auto speed_mb_s = speed * 1000 * 1000 *1000; // bytes per second
     auto speed_mb = speed_mb_s / 1024 / 1024; // megabytes per second 
 
-    spdlog::debug("WriteAction::on_log: {} {} {}", diff, duration_diff.count(), speed_mb);
+    spdlog::debug("WriteAction::on_log: {} MB/s", speed_mb);
     
   }, FileActionAttributes(true, DataSize<DataUnit::KB>(64), DataSize<DataUnit::GB>(3) , file, std::chrono::seconds(10)));
 
