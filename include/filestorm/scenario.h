@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filestorm/actions/actions.h>
+
 #include <string>
 
 class Scenario {

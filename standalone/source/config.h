@@ -8,8 +8,7 @@
 class Config {
 private:
   const std::vector<Scenario> supported_scenarios = {
-      Scenario("full"),
-      Scenario("partial"),
+      Scenario("basic"),
   };
 
 public:
