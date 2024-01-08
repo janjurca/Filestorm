@@ -15,3 +15,13 @@ const std::string Config::get_supported_scenarios_as_string() const {
   }
   return result;
 }
+
+const Scenario Config::get_scenario(const std::string& name) const {
+  for (auto scenario : supported_scenarios) {
+    if (scenario.name() == name) {
+      return scenario;
+    }
+  }
+  throw std::invalid_argument(fmt::format("Scenario {} not found. Supported scenarios are {}", name,
+                                          get_supported_scenarios_as_string()));
+}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <filestorm/scenario.h>
+#include <filestorm/scenarios/scenario.h>
 
 class Testrun {
 private:
