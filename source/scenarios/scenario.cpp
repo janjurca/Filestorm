@@ -13,7 +13,10 @@ void Scenario::setup(int argc, char** argv) {
   options.custom_help(fmt::format("{} [Options...]", name()));
   for (auto parameter : parameters()) {
     if (parameter.has_value())
-      options.add_options()(fmt::format("{},{}", parameter.short_name(), parameter.long_name()), parameter.description(), cxxopts::value<std::string>()->default_value(parameter.default_value()));
+      if (parameter.short_name().empty())
+        options.add_options()(parameter.long_name(), parameter.description(), cxxopts::value<std::string>()->default_value(parameter.value()));
+      else
+        options.add_options()(fmt::format("{},{}", parameter.short_name(), parameter.long_name()), parameter.description(), cxxopts::value<std::string>()->default_value(parameter.value()));
     else
       options.add_options()(fmt::format("{},{}", parameter.short_name(), parameter.long_name()), parameter.description());
   }
@@ -24,4 +27,23 @@ void Scenario::setup(int argc, char** argv) {
     std::cout << options.help() << std::endl;
     exit(0);
   }
+  // set values in parameters from parsed result
+  for (auto& parameter : _parameters) {
+    if (result.count(parameter.long_name())) {
+      std::string value = result[parameter.long_name()].as<std::string>();
+      spdlog::debug("Setting {} to {}", parameter.long_name(), value);
+      parameter.value(value);
+    }
+  }
+}
+
+void Scenario::run() {}
+
+Parameter Scenario::getParameter(const std::string& name) const {
+  for (auto parameter : parameters()) {
+    if (parameter.long_name() == name) {
+      return parameter;
+    }
+  }
+  throw std::invalid_argument(fmt::format("Parameter {} not found.", name));
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -8,6 +9,8 @@
 class FileTree {
 public:
   enum class Type { FILE, DIRECTORY };
+  static std::atomic<int> directory_count;
+  static std::atomic<int> file_count;
 
   struct Node {
     std::string name;

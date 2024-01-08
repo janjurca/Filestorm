@@ -15,7 +15,7 @@ void displayHelp() {
   std::cout << "Usage: filestorm SCENARIO\n"
             << "  SCENARIO: The scenario to run, available:" << std::endl;
   for (const auto& scenario : config.get_supported_scenarios()) {
-    std::cout << "    " << scenario.name() << " - " << scenario.description() << std::endl;
+    std::cout << "    " << scenario->name() << " - " << scenario->description() << std::endl;
   }
   std::cout << "Options:\n"
             << "  -h, --help     Display this help message\n"
@@ -53,7 +53,8 @@ auto main(int argc, char** argv) -> int {
     auto scenario = config.get_scenario(positionalArgument);
     int new_argc = argc - optind;
     char** new_argv = argv + optind;
-    scenario.setup(new_argc, new_argv);
+    scenario->setup(new_argc, new_argv);
+    scenario->run();
   } catch (const std::invalid_argument& e) {
     spdlog::error("Error: {}", e.what());
     return 1;

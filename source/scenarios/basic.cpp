@@ -12,3 +12,5 @@ BasicScenario::BasicScenario() {
 }
 
 BasicScenario::~BasicScenario() {}
+
+void BasicScenario::run() { std::cout << "Running basic scenario" << std::endl; }
