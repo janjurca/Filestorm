@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,10 +16,11 @@ public:
   struct Node {
     std::string name;
     Type type;
+    Node* parent;
     long size;
-    std::vector<std::unique_ptr<Node>> children;
+    std::map<std::string, std::unique_ptr<Node>> children;
 
-    Node(const std::string& n, Type t, long size = 0) : name(n), type(t), size(size) {}
+    Node(const std::string& n, Type t, Node* p, long size = 0) : name(n), type(t), parent(p), size(size) {}
   };
 
 private:
@@ -29,9 +31,13 @@ public:
 
   Node* addDirectory(Node* parent, const std::string& dirName);
 
-  void addFile(Node* parent, const std::string& fileName, long size = 0);
+  void remove(Node* node);
+
+  FileTree::Node* addFile(Node* parent, const std::string& fileName, long size = 0);
 
   void print() const;
+
+  Node* getRoot() const;
 
 private:
   void printRec(const Node* node, int depth) const;
