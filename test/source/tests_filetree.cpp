@@ -73,3 +73,108 @@ TEST_CASE("Testing FileTree with multiple levels") {
     CHECK(dir1->children.empty());
   }
 }
+
+TEST_CASE("FileTree mkdir") {
+  FileTree fileTree("root");
+
+  SUBCASE("Create directory non-recursively") {
+    auto createdDir = fileTree.mkdir("newDir", false);
+    REQUIRE(createdDir != nullptr);
+    CHECK(createdDir->name == "newDir");
+    CHECK(createdDir->type == FileTree::Type::DIRECTORY);
+
+    // Check that the parent directory has the child
+    CHECK(fileTree.getNode("/")->children.count("newDir") == 1);
+  }
+
+  SUBCASE("Create directory recursively") {
+    auto createdDir = fileTree.mkdir("newDir2/anotherDir", true);
+    REQUIRE(createdDir != nullptr);
+    CHECK(createdDir->name == "anotherDir");
+    CHECK(createdDir->type == FileTree::Type::DIRECTORY);
+
+    // Check that all parent directories have the child
+    CHECK(fileTree.getNode("/")->children.count("newDir2") == 1);
+    CHECK(fileTree.getNode("newDir2")->children.count("anotherDir") == 1);
+  }
+
+  SUBCASE("Create directory with existing path") {
+    auto createdDir = fileTree.mkdir("existingDir", false);
+    REQUIRE(createdDir != nullptr);
+
+    CHECK_THROWS_WITH_AS(fileTree.mkdir("existingDir", false), "Directory already registered!", std::runtime_error);
+
+    auto existingDir = fileTree.getNode("existingDir");
+    CHECK(existingDir != nullptr);
+    CHECK(existingDir->name == "existingDir");
+    CHECK(existingDir->type == FileTree::Type::DIRECTORY);
+  }
+}
+
+TEST_CASE("FileTree mkfile") {
+  FileTree fileTree("root");
+
+  SUBCASE("Create file") {
+    auto createdFile = fileTree.mkfile("newFile.txt");
+    REQUIRE(createdFile != nullptr);
+    CHECK(createdFile->name == "newFile.txt");
+    CHECK(createdFile->type == FileTree::Type::FILE);
+
+    // Check that the parent directory has the file
+    CHECK(fileTree.getNode("/")->children.count("newFile.txt") == 1);
+  }
+
+  SUBCASE("Create file with existing path") {
+    auto createdFile = fileTree.mkfile("existingFile.txt");
+    REQUIRE(createdFile != nullptr);
+
+    CHECK_THROWS_WITH_AS(fileTree.mkfile("existingFile.txt"), "File already registered!", std::runtime_error);
+
+    auto existingFile = fileTree.getNode("existingFile.txt");
+    CHECK(existingFile != nullptr);
+    CHECK(existingFile->name == "existingFile.txt");
+    CHECK(existingFile->type == FileTree::Type::FILE);
+  }
+}
+
+TEST_CASE("FileTree rm") {
+  FileTree fileTree("root");
+
+  SUBCASE("Remove file") {
+    auto createdFile = fileTree.mkfile("toRemove.txt");
+    REQUIRE(createdFile != nullptr);
+
+    fileTree.rm("toRemove.txt");
+    CHECK_THROWS_WITH_AS(fileTree.getNode("toRemove.txt"), "Node doesn't exist!", std::runtime_error);
+  }
+
+  SUBCASE("Remove directory recursively") {
+    auto createdDir = fileTree.mkdir("toRemoveDir", true);
+    REQUIRE(createdDir != nullptr);
+
+    fileTree.mkfile("toRemoveDir/file1.txt");
+    fileTree.mkfile("toRemoveDir/file2.txt");
+
+    fileTree.rm("toRemoveDir", true);
+    CHECK_THROWS_WITH_AS(fileTree.getNode("toRemoveDir"), "Node doesn't exist!", std::runtime_error);
+  }
+
+  SUBCASE("Remove non-empty directory non-recursively") {
+    auto createdDir = fileTree.mkdir("nonEmptyDir", true);
+    REQUIRE(createdDir != nullptr);
+
+    fileTree.mkfile("nonEmptyDir/file1.txt");
+
+    CHECK_THROWS_WITH_AS(fileTree.rm("nonEmptyDir", false), "Directory isn't empty!", std::runtime_error);
+
+    auto removedDir = fileTree.getNode("nonEmptyDir");
+    CHECK(removedDir != nullptr);  // Directory should not be removed non-recursively
+  }
+
+  SUBCASE("Remove non-existing path") {
+    fileTree.rm("nonExistingPath", true);
+    fileTree.rm("nonExistingPath/file.txt", true);
+
+    // No crashes or unexpected behavior should occur
+  }
+}

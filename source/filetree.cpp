@@ -1,4 +1,5 @@
 #include <filestorm/filetree.h>
+#include <filestorm/utils.h>
 
 std::atomic<int> FileTree::directory_count(0);
 std::atomic<int> FileTree::file_count(0);
@@ -46,19 +47,127 @@ void FileTree::printRec(const Node* node, int depth) const {
 
 void FileTree::remove(Node* node) {
   // recursively remove all children and optionaly parent
-  for (auto& child : node->children) {
-    remove(child.second.get());
+  while (node->children.size() > 0) {
+    remove(node->children.begin()->second.get());
   }
-  if (node->children.size() > 0) {
-    throw std::runtime_error("Node has children! Even though they should have been removed!");
-  }
-
   if (node->type == Type::DIRECTORY) {
     directory_count--;
   } else {
     file_count--;
   }
+
+  if (node->parent == nullptr) {
+    throw std::runtime_error("Can't remove root node!");
+  }
   node->parent->children.erase(node->name);
 }
 
 FileTree::Node* FileTree::getRoot() const { return root.get(); }
+
+FileTree::Node* FileTree::mkdir(std::string path, bool recursively) {
+  // split path by /
+  auto pathParts = split(path, '/');
+  if (pathParts.size() == 0) {
+    throw std::runtime_error("Path is empty!");
+  }
+  Node* current = root.get();
+  for (auto& part : pathParts) {
+    if (part == "") {
+      throw std::runtime_error("Path contains empty part!");
+    }
+    if (current->children.find(part) == current->children.end()) {
+      if (recursively or part == pathParts.back()) {
+        current = addDirectory(current, part);
+      } else {
+        throw std::runtime_error("Directory doesn't exist!");
+      }
+    } else {
+      if (part == pathParts.back()) {
+        throw std::runtime_error("Directory already registered!");
+      }
+      current = current->children[part].get();
+    }
+  }
+  return current;
+}
+
+FileTree::Node* FileTree::mkfile(std::string path) {
+  // split path by /
+  auto pathParts = split(path, '/');
+  if (pathParts.size() == 0) {
+    throw std::runtime_error("Path is empty!");
+  }
+  Node* current = root.get();
+  for (auto& part : pathParts) {
+    if (part == "") {
+      throw std::runtime_error("Path contains empty part!");
+    }
+    if (current->children.find(part) == current->children.end()) {
+      if (part == pathParts.back()) {
+        current = addFile(current, part);
+        return current;
+      } else {
+        throw std::runtime_error("Directory isn't registered!");
+      }
+    } else if (current->children[part]->type == Type::FILE) {
+      throw std::runtime_error("File already registered!");
+    } else {
+      current = current->children[part].get();
+    }
+  }
+  throw std::runtime_error("mkfile error: File probably already registered!");
+}
+
+FileTree::Node* FileTree::getNode(std::string path) {
+  // split path by /
+  if (path == "/") {
+    return root.get();
+  }
+  auto pathParts = split(path, '/');
+  if (pathParts.size() == 0) {
+    throw std::runtime_error("Path is empty!");
+  }
+  Node* current = root.get();
+  for (auto& part : pathParts) {
+    if (part == "") {
+      throw std::runtime_error("Path contains empty part!");
+    }
+    if (current->children.find(part) == current->children.end()) {
+      throw std::runtime_error("Node doesn't exist!");
+    } else {
+      current = current->children[part].get();
+    }
+  }
+  return current;
+}
+
+void FileTree::rm(std::string path, bool recursively) {
+  // split path by /
+  auto pathParts = split(path, '/');
+  if (pathParts.size() == 0) {
+    throw std::runtime_error("Path is empty!");
+  }
+  Node* current = nullptr;
+  if (recursively) {
+    try {
+      current = getNode(path);
+    } catch (const std::exception& e) {
+      return;
+    }
+    remove(current);
+    return;
+  } else {
+    current = getNode(path);
+    if (current->type == Type::FILE) {
+      remove(current);
+      return;
+    } else {
+      if (current->children.size() == 0) {
+        remove(current);
+        return;
+      } else {
+        throw std::runtime_error("Directory isn't empty!");
+      }
+    }
+  }
+}

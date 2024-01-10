@@ -28,12 +28,15 @@ private:
 
 public:
   FileTree(const std::string& rootName);
-
   Node* addDirectory(Node* parent, const std::string& dirName);
-
   void remove(Node* node);
-
   FileTree::Node* addFile(Node* parent, const std::string& fileName, long size = 0);
+
+  Node* mkdir(std::string path, bool recursively = false);
+  Node* mkfile(std::string path);
+  void rm(std::string path, bool recursively = false);
+
+  Node* getNode(std::string path);
 
   void print() const;
 
