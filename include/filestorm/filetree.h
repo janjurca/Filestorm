@@ -42,8 +42,8 @@ public:
 
   Node* getRoot() const;
 
-  const int getDirectoryCount() const { return directory_count; }
-  const int getFileCount() const { return file_count; }
+  int getDirectoryCount() const { return directory_count; }
+  int getFileCount() const { return file_count; }
 
 private:
   void printRec(const Node* node, int depth) const;

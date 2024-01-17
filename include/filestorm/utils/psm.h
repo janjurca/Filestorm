@@ -31,7 +31,7 @@ public:
 
 class ProbabilisticStateMachine {
 public:
-  ProbabilisticStateMachine(std::map<std::string, State>& states, std::map<std::string, Transition>& transitions, State& init) : _states(states), _transitions(transitions), _currentState(init) {}
+  ProbabilisticStateMachine(std::map<std::string, Transition>& transitions, State& init) : _transitions(transitions), _currentState(init) {}
 
   void performTransition() {
     // Choose a transition based on probabilities
@@ -58,6 +58,5 @@ public:
 
 private:
   State& _currentState;
-  std::map<std::string, State>& _states;
   std::map<std::string, Transition>& _transitions;
 };

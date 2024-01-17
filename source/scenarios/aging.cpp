@@ -71,7 +71,7 @@ void AgingScenario::run() {
   int iteration = 0;
   progressbar bar(getParameter("iterations").get_int());
 
-  ProbabilisticStateMachine psm(states, transtions, states.at("S"));
+  ProbabilisticStateMachine psm(transtions, states.at("S"));
 
   while (iteration < getParameter("iterations").get_int()) {
     bar.update();
