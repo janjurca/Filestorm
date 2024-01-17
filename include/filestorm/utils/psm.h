@@ -57,6 +57,6 @@ public:
   const State& getCurrentState() const { return _currentState; }
 
 private:
-  State& _currentState;
   std::map<std::string, Transition>& _transitions;
+  State& _currentState;
 };
