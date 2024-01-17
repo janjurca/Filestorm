@@ -1,7 +1,9 @@
 #pragma once
 
 #include <filestorm/actions/actions.h>
+#include <filestorm/utils/psm.h>
 
+#include <map>
 #include <string>
 
 class Parameter {
@@ -11,16 +13,22 @@ protected:
   std::string _description;
   std::string _value;
   bool _has_value;
+  std::function<std::string(std::string)> _on_set;
 
 public:
-  Parameter(std::string short_name, std::string long_name, std::string description, std::string value, bool has_value = true)
-      : _short_name(short_name), _long_name(long_name), _description(description), _value(value), _has_value(has_value){};
+  Parameter(std::string short_name, std::string long_name, std::string description, std::string value, bool has_value = true, std::function<std::string(std::string)> on_set = nullptr)
+      : _short_name(short_name), _long_name(long_name), _description(description), _value(value), _has_value(has_value), _on_set(on_set){};
   ~Parameter(){};
   std::string short_name() const { return _short_name; };
   std::string long_name() const { return _long_name; };
   std::string description() const { return _description; };
   std::string value() const { return _value; };
-  std::string value(const std::string& value) { return _value = value; };
+  std::string value(const std::string& value) {
+    if (_on_set != nullptr) {
+      return _value = _on_set(value);
+    }
+    return _value = value;
+  };
   bool has_value() const { return _has_value; };
   int get_int() const { return std::stoi(_value); };
   bool get_bool() const { return _value == "true" || _value == "True" || _value == "t" || _value == "T"; };
@@ -64,8 +72,11 @@ public:
 };
 
 class AgingScenario : public Scenario {
+protected:
 public:
   AgingScenario();
   ~AgingScenario();
   void run() override;
+
+  double CAF(double x) { return sqrt(1 - (x * x)); }
 };
