@@ -1,62 +1,54 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
+
 #include <cstdlib>
 #include <iostream>
 #include <vector>
 
-class State {
-public:
-  State(std::string name) : name(name) {}
-  State(const char* name) : name(name) {}
-  const std::string& getName() const { return name; }
-
-private:
-  std::string name;
-};
-
 class Transition {
 private:
-  State& _from;
-  State& _to;
+  int _from;
+  int _to;
 
-  std::function<double()> _probability_function;
+  std::string _probability_key;
 
 public:
-  Transition(State& from, State& to, std::function<double()> probability_callback) : _from(from), _to(to), _probability_function(probability_callback) {}
+  Transition(int from, int to, std::string probability_key) : _from(from), _to(to), _probability_key(probability_key) {}
 
-  const State& from() const { return _from; }
-  const State& to() const { return _to; }
-  double probability() const { return _probability_function(); }
+  int from() const { return _from; }
+  int to() const { return _to; }
+  std::string probability_key() const { return _probability_key; }
 };
 
 class ProbabilisticStateMachine {
 public:
-  ProbabilisticStateMachine(std::map<std::string, Transition>& transitions, State& init) : _transitions(transitions), _currentState(init) {}
+  ProbabilisticStateMachine(std::map<std::string, Transition>& transitions, int init) : _transitions(transitions), _currentState(init) {}
 
-  void performTransition() {
+  void performTransition(std::map<std::string, double>& probabilities) {
     // Choose a transition based on probabilities
-    double randomValue = static_cast<double>(rand()) / RAND_MAX;
+    double randomValue = ((double)rand() / (RAND_MAX));
     double cumulativeProbability = 0.0;
 
     for (const auto& transition : _transitions) {
-      if (transition.second.from().getName() != _currentState.getName()) {
+      if (transition.second.from() != _currentState) {
         continue;
       }
-
-      cumulativeProbability += transition.second.probability();
+      cumulativeProbability += probabilities[transition.second.probability_key()];
+      //  spdlog::debug("Cumulative probability: {}", cumulativeProbability);
       if (randomValue <= cumulativeProbability) {
         // Transition to the next state
         _currentState = transition.second.to();
-        std::cout << "Performed transition from " << transition.second.from().getName() << " to " << transition.second.to().getName() << std::endl;
-        break;
+        return;
       }
     }
+
     throw std::runtime_error("No transitions from current state");
   }
 
-  const State& getCurrentState() const { return _currentState; }
+  int getCurrentState() const { return _currentState; }
 
 private:
   std::map<std::string, Transition>& _transitions;
-  State& _currentState;
+  int _currentState;
 };

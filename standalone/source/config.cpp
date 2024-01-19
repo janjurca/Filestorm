@@ -22,5 +22,5 @@ Scenario* Config::get_scenario(const std::string& name) const {
       return scenario;
     }
   }
-  throw std::invalid_argument(fmt::format("Scenario {} not found. Supported scenarios are {}", name, get_supported_scenarios_as_string()));
+  throw BadScenarioSelected(fmt::format("Scenario {} not found. Supported scenarios are {}", name, get_supported_scenarios_as_string()));
 }

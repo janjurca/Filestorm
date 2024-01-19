@@ -33,7 +33,8 @@ TEST_CASE("Testing FileTree") {
   SUBCASE("Removing nodes") {
     auto dir1 = tree.addDirectory(tree.getRoot(), "dir1");
     tree.remove(dir1);
-    CHECK(tree.getRoot()->children.empty());
+    CHECK(tree.getRoot()->files.empty());
+    CHECK(tree.getRoot()->folders.empty());
   }
 }
 
@@ -70,7 +71,8 @@ TEST_CASE("Testing FileTree with multiple levels") {
     auto dir1 = tree.addDirectory(tree.getRoot(), "dir1");
     auto subdir1 = tree.addDirectory(dir1, "subdir1");
     tree.remove(subdir1);
-    CHECK(dir1->children.empty());
+    CHECK(dir1->files.empty());
+    CHECK(dir1->folders.empty());
   }
 }
 
@@ -84,7 +86,8 @@ TEST_CASE("FileTree mkdir") {
     CHECK(createdDir->type == FileTree::Type::DIRECTORY);
 
     // Check that the parent directory has the child
-    CHECK(fileTree.getNode("/")->children.count("newDir") == 1);
+    CHECK(fileTree.getNode("/")->folders.count("newDir") == 1);
+    CHECK(fileTree.getNode("/")->files.count("newDir") == 0);
   }
 
   SUBCASE("Create directory recursively") {
@@ -94,8 +97,8 @@ TEST_CASE("FileTree mkdir") {
     CHECK(createdDir->type == FileTree::Type::DIRECTORY);
 
     // Check that all parent directories have the child
-    CHECK(fileTree.getNode("/")->children.count("newDir2") == 1);
-    CHECK(fileTree.getNode("newDir2")->children.count("anotherDir") == 1);
+    CHECK(fileTree.getNode("/")->folders.count("newDir2") == 1);
+    CHECK(fileTree.getNode("newDir2")->folders.count("anotherDir") == 1);
   }
 
   SUBCASE("Create directory with existing path") {
@@ -121,7 +124,8 @@ TEST_CASE("FileTree mkfile") {
     CHECK(createdFile->type == FileTree::Type::FILE);
 
     // Check that the parent directory has the file
-    CHECK(fileTree.getNode("/")->children.count("newFile.txt") == 1);
+    CHECK(fileTree.getNode("/")->files.count("newFile.txt") == 1);
+    CHECK(fileTree.getNode("/")->folders.count("newFile.txt") == 0);
   }
 
   SUBCASE("Create file with existing path") {

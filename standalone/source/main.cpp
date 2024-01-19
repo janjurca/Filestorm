@@ -2,6 +2,7 @@
 #include <filestorm/actions/rw_actions.h>
 #include <filestorm/data_sizes.h>
 #include <filestorm/version.h>
+#include <getopt.h>
 #include <spdlog/spdlog.h>
 #include <unistd.h>  // Include for getopts
 
@@ -19,28 +20,14 @@ void displayHelp() {
   }
   std::cout << "Options:\n"
             << "  -h, --help     Display this help message\n"
-            << "  -v, --version  Display version information\n";
+            << "  -v, --version  Display version information\n"
+            << "  -l, --log level     Set the log level (trace, debug, info, warn, error, critical, off)" << std::endl;
 }
 
 void displayVersion() { std::cout << FILESTORM_VERSION << std::endl; }
 
 auto main(int argc, char** argv) -> int {
   spdlog::set_level(spdlog::level::debug);
-  int option;
-  while ((option = getopt(argc, argv, "hv")) != -1) {
-    switch (option) {
-      case 'h':
-        displayHelp();
-        return 0;
-      case 'v':
-        displayVersion();
-        return 0;
-      default:
-        spdlog::error("Error: Invalid option.");
-        displayHelp();
-        return 1;
-    }
-  }
 
   if (optind >= argc) {
     spdlog::error("Error: Insufficient arguments.");
@@ -55,8 +42,31 @@ auto main(int argc, char** argv) -> int {
     char** new_argv = argv + optind;
     scenario->setup(new_argc, new_argv);
     scenario->run();
-  } catch (const std::invalid_argument& e) {
-    spdlog::error("Error: {}", e.what());
+  } catch (const BadScenarioSelected& e) {
+    spdlog::error("Error on main: {}", e.what());
+    const struct option long_options[] = {{"help", no_argument, NULL, 'h'}, {"version", no_argument, NULL, 'v'}, {"log", required_argument, NULL, 'l'}, {NULL, 0, NULL, 0}};
+    int opt;
+    while ((opt = getopt_long(argc, argv, "hvl:", long_options, NULL)) != -1) {
+      switch (opt) {
+        case 'h':
+          // Display help message
+          displayHelp();
+          return 0;
+        case 'v':
+          // Display version information
+          displayVersion();
+          return 0;
+        case 'l':
+          // Set the log level
+          spdlog::set_level(spdlog::level::from_str(optarg));
+          break;
+        case '?':
+          // Handle unknown options or missing arguments
+          break;
+        default:
+          break;
+      }
+    }
     return 1;
   }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filestorm/utils.h>
+
 #include <atomic>
 #include <iostream>
 #include <map>
@@ -13,21 +15,37 @@ public:
   static std::atomic<int> directory_count;
   static std::atomic<int> file_count;
 
+  static std::atomic<int> directory_id;
+  static std::atomic<int> file_id;
+
+  unsigned int _max_depth;
+
   struct Node {
     std::string name;
     Type type;
     Node* parent;
     long size;
-    std::map<std::string, std::unique_ptr<Node>> children;
+    std::map<std::string, std::unique_ptr<Node>> folders;
+    std::map<std::string, std::unique_ptr<Node>> files;
 
     Node(const std::string& n, Type t, Node* p, long size = 0) : name(n), type(t), parent(p), size(size) {}
+    std::string path(bool include_root = false) const {
+      if (parent == nullptr) {
+        if (include_root) {
+          return name;
+        } else {
+          return "";
+        }
+      }
+      return parent->path(include_root) + "/" + name;
+    }
   };
 
 private:
   std::unique_ptr<Node> root;
 
 public:
-  FileTree(const std::string& rootName);
+  FileTree(const std::string& rootName, unsigned int max_depth = 0);
   Node* addDirectory(Node* parent, const std::string& dirName);
   void remove(Node* node);
   FileTree::Node* addFile(Node* parent, const std::string& fileName, long size = 0);
@@ -44,6 +62,9 @@ public:
 
   int getDirectoryCount() const { return directory_count; }
   int getFileCount() const { return file_count; }
+
+  std::string newDirectoryPath();
+  std::string newFilePath();
 
 private:
   void printRec(const Node* node, int depth) const;

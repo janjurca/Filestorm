@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filestorm/actions/actions.h>
+#include <filestorm/filetree.h>
 #include <filestorm/utils/psm.h>
 
 #include <map>
@@ -73,6 +74,23 @@ public:
 
 class AgingScenario : public Scenario {
 protected:
+  enum States {
+    S,
+    CREATE,
+    ALTER,
+    DELETE,
+    CREATE_FILE,
+    CREATE_DIR,
+    ALTER_SMALLER,
+    ALTER_BIGGER,
+    ALTER_METADATA,
+    DELETE_FILE,
+    DELETE_DIR,
+    END,
+  };
+
+  void compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree);
+
 public:
   AgingScenario();
   ~AgingScenario();

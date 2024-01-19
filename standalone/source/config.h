@@ -3,6 +3,8 @@
 #include <filestorm/scenarios/scenario.h>
 #include <filestorm/testrun.h>
 
+#include <iostream>
+#include <stdexcept>
 #include <vector>
 
 class Config {
@@ -20,3 +22,11 @@ public:
 };
 
 extern const Config config;
+
+// Custom exception class
+
+class BadScenarioSelected : public std::runtime_error {
+public:
+  BadScenarioSelected(const char* message) : std::runtime_error(message) {}
+  BadScenarioSelected(const std::string& message) : std::runtime_error(message) {}
+};
