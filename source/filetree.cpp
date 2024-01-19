@@ -129,10 +129,10 @@ FileTree::Node* FileTree::mkfile(std::string path) {
 
 FileTree::Node* FileTree::getNode(std::string path) {
   // split path by /
-  path = strip(path, '/');
   if (path == "/") {
     return root.get();
   }
+  path = strip(path, '/');
   auto pathParts = split(path, '/');
   if (pathParts.size() == 0) {
     throw std::runtime_error("Path is empty!");
