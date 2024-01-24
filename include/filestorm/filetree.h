@@ -66,6 +66,9 @@ public:
   std::string newDirectoryPath();
   std::string newFilePath();
 
+  Node* randomFile();
+  Node* randomDirectory();
+
 private:
   void printRec(const Node* node, int depth) const;
 };

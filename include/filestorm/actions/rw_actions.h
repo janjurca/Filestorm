@@ -28,28 +28,26 @@
 #include <vector>
 // ABOUT DIRECT IO https://github.com/facebook/rocksdb/wiki/Direct-IO
 
-class ReadAction : public VirtualMonitoredAction, public FileActionAttributes {
+class ReadMonitoredAction : public VirtualMonitoredAction, public FileActionAttributes {
 protected:
   u_int64_t m_read_bytes = 0;
 
   inline off_t get_offset();
 
 public:
-  ReadAction(std::chrono::milliseconds monitoring_interval,
-             std::function<void(VirtualMonitoredAction*)> on_log,
-             FileActionAttributes file_attributes);
+  ReadMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes);
 
   void work() override;
   void log_values() override;
 };
-class RandomReadAction : public ReadAction {
+class RandomReadMonitoredAction : public ReadMonitoredAction {
 private:
   std::vector<off_t> m_offsets;
 
   inline off_t get_offset();
 };
 
-class WriteAction : public VirtualMonitoredAction, public FileActionAttributes {
+class WriteMonitoredAction : public VirtualMonitoredAction, public FileActionAttributes {
 protected:
   u_int64_t m_written_bytes = 0;
 
@@ -57,16 +55,14 @@ protected:
   inline void generate_random_chunk(char* chunk, size_t size);
 
 public:
-  WriteAction(std::chrono::milliseconds monitoring_interval,
-              std::function<void(VirtualMonitoredAction*)> on_log,
-              FileActionAttributes file_attributes);
+  WriteMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes);
 
   void work() override;
 
   void log_values() override;
 };
 
-class RandomWriteAction : public WriteAction {
+class RandomWriteMonitoredAction : public WriteMonitoredAction {
 private:
   std::vector<off_t> m_offsets;
 

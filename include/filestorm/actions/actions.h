@@ -21,9 +21,7 @@ private:
   const std::chrono::seconds m_time_limit;
 
 public:
-  FileActionAttributes(bool time_based, DataSize<DataUnit::B> block_size,
-                       DataSize<DataUnit::KB> file_size, std::string file_path,
-                       std::chrono::seconds time_limit);
+  FileActionAttributes(bool time_based, DataSize<DataUnit::B> block_size, DataSize<DataUnit::KB> file_size, std::string file_path, std::chrono::seconds time_limit);
 
   DataSize<DataUnit::B> get_block_size() const;
   DataSize<DataUnit::KB> get_file_size() const;
@@ -53,6 +51,15 @@ public:
   std::chrono::nanoseconds getLastDuration();
 };
 
+class MeasuredCBAction : public VirtualMeasuredAction {
+public:
+  std::function<void()> m_cb;
+
+  MeasuredCBAction(std::function<void()> cb) : m_cb(cb) {}
+
+  void work() override { m_cb(); }
+};
+
 class VirtualMonitoredAction {
 protected:
   std::chrono::milliseconds m_interval;
@@ -65,8 +72,7 @@ protected:
   std::function<void(VirtualMonitoredAction*)> m_on_log;
 
 public:
-  VirtualMonitoredAction(std::chrono::milliseconds monitoring_interval,
-                         std::function<void(VirtualMonitoredAction*)> on_log);
+  VirtualMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log);
 
   ~VirtualMonitoredAction();
 
@@ -81,7 +87,6 @@ public:
   void addMonitoredData(std::string name, float value);
 
   std::chrono::milliseconds get_interval();
-  std::map<std::string, std::vector<std::tuple<std::chrono::nanoseconds, float>>>
-  get_monitored_data();
+  std::map<std::string, std::vector<std::tuple<std::chrono::nanoseconds, float>>> get_monitored_data();
   std::chrono::nanoseconds get_monitor_started_at();
 };

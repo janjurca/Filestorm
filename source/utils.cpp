@@ -48,3 +48,15 @@ std::string strip(const std::string& str, const char stripChar) {
   // Return the stripped substring
   return str.substr(start, end - start);
 }
+
+std::string toLower(const std::string& str) {
+  std::string result = str;
+  std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return std::tolower(c); });
+  return result;
+}
+
+std::string toUpper(const std::string& str) {
+  std::string result = str;
+  std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return std::toupper(c); });
+  return result;
+}

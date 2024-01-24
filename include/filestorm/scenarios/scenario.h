@@ -97,4 +97,6 @@ public:
   void run() override;
 
   double CAF(double x) { return sqrt(1 - (x * x)); }
+  DataSize<DataUnit::B> get_file_size();
+  DataSize<DataUnit::B> get_file_size(uint64_t min, uint64_t max);
 };
