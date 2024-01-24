@@ -194,3 +194,28 @@ TEST_CASE("DataSize Unit Conversion fractional") {
 
   // Add more cases for other unit conversions
 }
+
+TEST_CASE("DataSize fromString") {
+  // Test valid inputs
+  CHECK(DataSize<DataUnit::B>::fromString("123B") == DataSize<DataUnit::B>(123));
+  CHECK(DataSize<DataUnit::KB>::fromString("456KB") == DataSize<DataUnit::KB>(456));
+  CHECK(DataSize<DataUnit::MB>::fromString("789M") == DataSize<DataUnit::MB>(789));
+  CHECK(DataSize<DataUnit::GB>::fromString("10G") == DataSize<DataUnit::GB>(10));
+  CHECK(DataSize<DataUnit::TB>::fromString("11TB") == DataSize<DataUnit::TB>(11));
+  CHECK(DataSize<DataUnit::PB>::fromString("12PB") == DataSize<DataUnit::PB>(12));
+
+  // Test valid inputs with lowercase units
+  CHECK(DataSize<DataUnit::KB>::fromString("13kb") == DataSize<DataUnit::KB>(13));
+  CHECK(DataSize<DataUnit::MB>::fromString("14mb") == DataSize<DataUnit::MB>(14));
+  CHECK(DataSize<DataUnit::GB>::fromString("15gb") == DataSize<DataUnit::GB>(15));
+  CHECK(DataSize<DataUnit::TB>::fromString("16tb") == DataSize<DataUnit::TB>(16));
+  CHECK(DataSize<DataUnit::PB>::fromString("17pb") == DataSize<DataUnit::PB>(17));
+
+  // Test invalid inputs
+  CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("invalid"), std::runtime_error);
+  CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("123"), std::runtime_error);
+  CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("B123"), std::runtime_error);
+  CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("1.5B"), std::runtime_error);
+  CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("123 MB"), std::runtime_error);
+  CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("invalid unit"), std::runtime_error);
+}

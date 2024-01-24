@@ -107,19 +107,33 @@ public:
   static DataSize<T> fromString(const std::string &str) {
     std::string value_str;
     std::string unit_str;
+
+    bool reading_number = true;
     for (auto &c : str) {
-      if (std::isdigit(c)) {
+      if ((std::isdigit(c) || c == '.')) {
+        if (reading_number == false) {
+          throw std::runtime_error(fmt::format("Invalid data size string: {}", str));
+        }
         value_str += c;
       } else {
         unit_str += c;
+        reading_number = false;
       }
     }
+
     if (value_str.empty() || unit_str.empty()) {
       throw std::runtime_error(fmt::format("Invalid data size string: {}", str));
     }
+
     unit_str = toUpper(unit_str);
-    uint64_t value = std::stoull(value_str);
+    double value = std::stod(value_str);
+    bool hasDecimalPlaces = value != std::floor(value);
+    if (hasDecimalPlaces) {
+      throw std::runtime_error(fmt::format("Invalid data size string (decimal places are not supported): {}", str));
+    }
+
     DataUnit unit;
+
     if (unit_str == "B") {
       unit = DataUnit::B;
     } else if (unit_str == "KB" || unit_str == "K") {
@@ -133,9 +147,10 @@ public:
     } else if (unit_str == "PB" || unit_str == "P") {
       unit = DataUnit::PB;
     } else {
-      return DataSize<T>();
+      throw std::runtime_error(fmt::format("Invalid data size unit: {}", unit_str));
     }
-    return DataSize<T>(value, false).template convert<T>();
+
+    return DataSize<T>(static_cast<uint64_t>(value * (static_cast<uint64_t>(T) / static_cast<uint64_t>(unit))), false);
   }
 };
 
