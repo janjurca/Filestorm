@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filestorm/actions/actions.h>
+#include <filestorm/data_sizes.h>
 #include <filestorm/filetree.h>
 #include <filestorm/utils/psm.h>
 
@@ -98,5 +99,6 @@ public:
 
   double CAF(double x) { return sqrt(1 - (x * x)); }
   DataSize<DataUnit::B> get_file_size();
-  DataSize<DataUnit::B> get_file_size(uint64_t min, uint64_t max);
+  DataSize<DataUnit::B> get_file_size(uint64_t min, uint64_t max, bool safe = true);
+  DataSize<DataUnit::B> get_block_size() { return DataSize<DataUnit::B>::fromString(getParameter("blocksize").get_string()); };
 };

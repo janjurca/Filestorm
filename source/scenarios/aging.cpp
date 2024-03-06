@@ -1,13 +1,25 @@
+#include <fcntl.h>  // for open
 #include <filestorm/actions/actions.h>
 #include <filestorm/data_sizes.h>
 #include <filestorm/filetree.h>
 #include <filestorm/result.h>
 #include <filestorm/scenarios/scenario.h>
+#include <filestorm/utils.h>
 #include <filestorm/utils/fs.h>
 #include <filestorm/utils/progress_bar.h>
 #include <fmt/format.h>
+#include <sys/stat.h>  // for S_IRWXU
+#include <unistd.h>    // for close
 
+#include <algorithm>
+#include <cerrno>  // for errno
+#include <chrono>
+#include <cstring>  // for strerror
+#include <filesystem>
+#include <fstream>
+#include <iostream>  // for std::cerr
 #include <iostream>
+#include <memory>  // for std::unique_ptr
 #include <random>
 #include <string_view>
 
@@ -29,6 +41,17 @@ AgingScenario::AgingScenario() {
 AgingScenario::~AgingScenario() {}
 
 void AgingScenario::run() {
+  if (!std::filesystem::exists(getParameter("directory").get_string())) {
+    throw std::runtime_error(fmt::format("Directory {} does not exist!", getParameter("directory").get_string()));
+  }
+  if (!std::filesystem::is_directory(getParameter("directory").get_string())) {
+    throw std::runtime_error(fmt::format("{} is not a directory!", getParameter("directory").get_string()));
+  }
+  if (!std::filesystem::is_empty(getParameter("directory").get_string())) {
+    spdlog::warn("Directory {} is not empty!", getParameter("directory").get_string());
+    throw std::runtime_error(fmt::format("{} is not empty!", getParameter("directory").get_string()));
+  }
+
   FileTree tree(getParameter("directory").get_string(), getParameter("depth").get_int());
   std::map<std::string, Transition> transtions;
   transtions.emplace("S->CREATE", Transition(S, CREATE, "pC"));
@@ -75,12 +98,42 @@ void AgingScenario::run() {
         spdlog::debug("DELETE");
         break;
       case CREATE_FILE: {
-        auto new_file_path = tree.newFilePath();
-        spdlog::debug("CREATE_FILE {}", new_file_path);
-        FileTree::Node* file_node = tree.mkfile(new_file_path);
-        spdlog::debug(fmt::format("CREATE_FILE {} {}", new_file_path, file_node->path(true)));
+        FileTree::Node* file_node = tree.mkfile(tree.newFilePath());
+        spdlog::debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
-        MeasuredCBAction action([&]() { spdlog::debug(fmt::format("Writing {} bytes to {}", file_size.get_value(), file_node->path(true))); });
+        spdlog::debug("CREATE_FILE {} with size {}", file_node->path(true), file_size.get_value());
+
+        int fd;
+        std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
+        size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+        generate_random_chunk(line.get(), block_size);
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#  error "Windows is not supported"
+#elif __APPLE__
+        fd = open(file_node->path(true).c_str(), O_RDWR | O_CREAT, S_IRWXU);
+        if (fcntl(fd, F_NOCACHE, 1) == -1 && fd != -1) {
+          close(fd);
+          throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
+        }
+#elif __linux__ || __unix__ || defined(_POSIX_VERSION)
+        fd = open(file_node->path(true).c_str(), O_DIRECT | O_RDWR | O_CREAT, S_IRWXU);
+#else
+#  error "Unknown system"
+#endif
+        if (fd == -1) {
+          std::cerr << "Error opening file: " << strerror(errno) << std::endl;
+          if (errno == EINVAL) {
+            throw std::runtime_error("Error: Direct IO not supported");
+          }
+          throw std::runtime_error(fmt::format("Error opening file {}", file_node->path(true)));
+        }
+        spdlog::debug("CREATE_FILE {} with size {}", file_node->path(true), file_size.get_value());
+        MeasuredCBAction action([&]() {
+          for (uint64_t written_bytes = 0; written_bytes < file_size.get_value(); written_bytes += block_size) {
+            write(fd, line.get(), block_size);
+          }
+          close(fd);
+        });
         auto duration = action.exec();
         spdlog::debug(fmt::format("Wrote {} bytes in {} ms", file_size.get_value(), duration.count() / 1000000.0));
         break;
@@ -89,26 +142,67 @@ void AgingScenario::run() {
         auto new_dir_path = tree.newDirectoryPath();
         spdlog::debug("CREATE_DIR {}", new_dir_path);
         FileTree::Node* dir_node = tree.mkdir(new_dir_path);
-        spdlog::debug(fmt::format("CREATE_DIR {}", new_dir_path, dir_node->path(true)));
-        MeasuredCBAction action([&]() { spdlog::debug("Creating {}", dir_node->path(true)); });
+        auto dir_path = dir_node->path(true);
+        spdlog::debug(fmt::format("CREATE_DIR {}", new_dir_path, dir_path));
+
+        MeasuredCBAction action([&]() { std::filesystem::create_directory(dir_path); });
+        action.exec();
         break;
       }
       case ALTER_SMALLER: {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
-        auto new_file_size = get_file_size(0, actual_file_size);
-        spdlog::debug("ALTER_SMALLER {} from {} to {}", random_file_path, actual_file_size, new_file_size);
-        // TODO make file smaller
+        auto new_file_size = get_file_size(0, actual_file_size, false);
+        spdlog::debug("ALTER_SMALLER {} from {} kB to {} kB", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024);
+        MeasuredCBAction action([&]() { truncate(random_file_path.c_str(), new_file_size.convert<DataUnit::B>().get_value()); });
+        action.exec();
         break;
       }
       case ALTER_BIGGER: {
+        std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
+        size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+        generate_random_chunk(line.get(), block_size);
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
         auto new_file_size = get_file_size(actual_file_size, 0);
         spdlog::debug("ALTER_BIGGER {} from {} to {}", random_file_path, actual_file_size, new_file_size);
-        // TODO make file bigger
+        int fd;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#  error "Windows is not supported"
+#elif __APPLE__
+        fd = open(random_file_path.c_str(), O_WRONLY | O_APPEND, S_IRWXU);
+        if (fcntl(fd, F_NOCACHE, 1) == -1 && fd != -1) {
+          close(fd);
+          throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
+        }
+#elif __linux__ || __unix__ || defined(_POSIX_VERSION)
+        fd = open(random_file_path.c_str(), O_DIRECT | O_WRONLY | O_APPEND, S_IRWXU);
+#else
+#  error "Unknown system"
+#endif
+        if (fd == -1) {
+          std::cerr << "Error opening file: " << strerror(errno) << std::endl;
+          if (errno == EINVAL) {
+            throw std::runtime_error("Error: Direct IO not supported");
+          }
+          throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
+        }
+        auto current_size = lseek(fd, 0, SEEK_END);
+        if (current_size == -1) {
+          perror("Error getting file size");
+          close(fd);
+          throw std::runtime_error(fmt::format("Error getting file size {}", random_file_path));
+        }
+
+        MeasuredCBAction action([&]() {
+          for (uint64_t written_bytes = actual_file_size; written_bytes < new_file_size.get_value(); written_bytes += block_size) {
+            write(fd, line.get(), block_size);
+          }
+          close(fd);
+        });
+        auto duration = action.exec();
         break;
       }
       case ALTER_METADATA:
@@ -118,14 +212,15 @@ void AgingScenario::run() {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         spdlog::debug("DELETE_FILE {}", random_file_path);
-        // TODO delete file
+        MeasuredCBAction action([&]() { std::filesystem::remove(random_file_path); });
+        action.exec();
+        tree.rm(random_file->path(false));
         break;
       }
       case DELETE_DIR: {
         auto random_dir = tree.randomDirectory();
         auto random_dir_path = random_dir->path(true);
         spdlog::debug("DELETE_DIR {}", random_dir_path);
-        // TODO delete dir
         break;
       }
       case END:
@@ -139,6 +234,24 @@ void AgingScenario::run() {
 
     // bar.update();
   }
+
+  // Count files and total extent count
+  /*
+  int file_count = 0;
+  int total_extents = 0;
+  for (auto& file : tree.all_files) {
+    file_count++;
+    total_extents += file->getExtentsCount();
+  }
+  spdlog::info("File count: {}, total extents: {}", file_count, total_extents);
+*/
+  // cleanup
+  for (auto& file : tree.all_files) {
+    std::filesystem::remove(file->path(true));
+  }
+  // for (auto& dir : tree.all_directories) {
+  //   std::filesystem::remove(dir->path(true));
+  // }
 }
 
 void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree) {
@@ -146,41 +259,42 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   auto fs_status = fs_utils::get_fs_status(getParameter("directory").get_string());
 
   // double CAF(double x) { return sqrt(1 - (x * x)); }
-  // spdlog::debug("Capacity: {}, free: {}", fs_status.capacity, fs_status.free);
-  // spdlog::debug("CAF input: {}", ((float(fs_status.capacity - fs_status.free) / float(fs_status.capacity))));
+  // spdlog::debug("Capacity: {}, available: {}", fs_status.capacity, fs_status.available);
+  // spdlog::debug("CAF input: {}", ((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity))));
 
-  double caf = CAF((float(fs_status.capacity - fs_status.free) / float(fs_status.capacity)));
-
+  double caf = CAF((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity)));
+  caf = ceilTo(caf, 3);
   probabilities["pC"] = caf;
   probabilities["pD"] = 0.1 * (1.0 - caf);
   probabilities["pA"] = 1 - caf - probabilities["pD"];
-  std::string logMessage = fmt::format("pC: {:.2f}, pD: {:.2f}, pA: {:.2f}, sum p {:.2f} ", probabilities["pC"], probabilities["pD"], probabilities["pA"],
-                                       probabilities["pC"] + probabilities["pD"] + probabilities["pA"]);
   probabilities["pAM"] = 0.1;
-  probabilities["pAB"] = caf;
+  probabilities["pAB"] = caf - probabilities["pAM"];
   probabilities["pAS"] = 1 - probabilities["pAM"] - probabilities["pAB"];
-  logMessage += fmt::format("pAM: {:.2f}, pAB: {:.2f}, pAS: {:.2f}, sum pA {:.2f} ", probabilities["pAM"], probabilities["pAB"], probabilities["pAS"],
-                            probabilities["pAM"] + probabilities["pAB"] + probabilities["pAS"]);
   probabilities["pDD"] = 0.01;
   probabilities["pDF"] = 1 - probabilities["pDD"];
-  logMessage += fmt::format("pDD: {:.2f}, pDF: {:.2f}, sum pD {:.2f} ", probabilities["pDD"], probabilities["pDF"], probabilities["pDD"] + probabilities["pDF"]);
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
   probabilities["pCD"] = 1 - probabilities["pCF"];
-  logMessage += fmt::format("pCF: {:.2f}, pCD: {:.2f}, sum pC {:.2f} ", probabilities["pCF"], probabilities["pCD"], probabilities["pCF"] + probabilities["pCD"]);
   probabilities["p1"] = 1.0;
-  // spdlog::debug(logMessage);
+
+#if true
+  std::string logMessage = fmt::format("Capacity: {} MB | available: {} MB | pC: {:.2f}, pD: {:.2f}, pA: {:.2f}, sum p {:.2f} ", fs_status.capacity / 1024 / 1024, fs_status.available / 1024 / 1024,
+                                       probabilities["pC"], probabilities["pD"], probabilities["pA"], probabilities["pC"] + probabilities["pD"] + probabilities["pA"]);
+  logMessage += fmt::format("pAM: {:.2f}, pAB: {:.2f}, pAS: {:.2f}, sum pA {:.2f} ", probabilities["pAM"], probabilities["pAB"], probabilities["pAS"],
+                            probabilities["pAM"] + probabilities["pAB"] + probabilities["pAS"]);
+  logMessage += fmt::format("pDD: {:.2f}, pDF: {:.2f}, sum pD {:.2f} ", probabilities["pDD"], probabilities["pDF"], probabilities["pDD"] + probabilities["pDF"]);
+  logMessage += fmt::format("pCF: {:.2f}, pCD: {:.2f}, sum pC {:.2f} ", probabilities["pCF"], probabilities["pCD"], probabilities["pCF"] + probabilities["pCD"]);
+  spdlog::debug(logMessage);
+#endif
 }
 
-DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t range_to) {
-  std::filesystem::space_info fs_status = fs_utils::get_fs_status(getParameter("directory").get_string());
-
+DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t range_to, bool safe) {
   std::random_device rand_dev;
   std::mt19937 generator(rand_dev());
-
   DataSize<DataUnit::B> return_size(0);
   if (getParameter("sdist").get_string() == "uniform") {
-    std::uniform_int_distribution<int> distr(range_from, range_to);
-    return_size = DataSize<DataUnit::B>(distr(generator));
+    std::uniform_int_distribution<uint64_t> distr(range_from, range_to);
+    auto d = distr(generator);
+    return_size = DataSize<DataUnit::B>(d);
   } else if (getParameter("sdist").get_string() == "normal") {
     double mean = range_to / 2;
     double stddev = mean / 2;
@@ -189,14 +303,21 @@ DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t
   } else {
     throw std::runtime_error("Invalid file size distribution!");
   }
-  if (return_size.get_value() > fs_status.free) {
-    return_size = fs_status.free;
+  if (safe) {
+    std::filesystem::space_info fs_status = fs_utils::get_fs_status(getParameter("directory").get_string());
+    if (return_size.get_value() > fs_status.available) {
+      return_size = DataSize<DataUnit::B>(fs_status.available);
+      auto block_size = get_block_size().convert<DataUnit::B>().get_value();
+      return_size = DataSize<DataUnit::B>(return_size.get_value() - (return_size.get_value() % block_size));
+    }
   }
   return return_size;
 }
 
 DataSize<DataUnit::B> AgingScenario::get_file_size() {
-  auto max_size = DataSize<DataUnit::B>::fromString(getParameter("fsize").get_string()).convert<DataUnit::B>();
+  auto max_size = DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>();
   auto min_size = DataSize<DataUnit::B>::fromString(getParameter("minfsize").get_string()).convert<DataUnit::B>();
-  return get_file_size(min_size.get_value(), max_size.get_value());
+  auto fsize = get_file_size(min_size.get_value(), max_size.get_value());
+  spdlog::debug("get_file_size: {} - {} : {} / {}", min_size.get_value(), max_size.get_value(), fsize.get_value());
+  return fsize;
 }

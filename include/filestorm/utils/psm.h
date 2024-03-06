@@ -27,7 +27,7 @@ public:
 
   void performTransition(std::map<std::string, double>& probabilities) {
     // Choose a transition based on probabilities
-    double randomValue = ((double)rand() / (RAND_MAX));
+    double randomValue = ((double)rand() / (double)(RAND_MAX));
     double cumulativeProbability = 0.0;
 
     for (const auto& transition : _transitions) {
@@ -35,7 +35,6 @@ public:
         continue;
       }
       cumulativeProbability += probabilities[transition.second.probability_key()];
-      //  spdlog::debug("Cumulative probability: {}", cumulativeProbability);
       if (randomValue <= cumulativeProbability) {
         // Transition to the next state
         _currentState = transition.second.to();

@@ -132,25 +132,28 @@ public:
       throw std::runtime_error(fmt::format("Invalid data size string (decimal places are not supported): {}", str));
     }
 
-    DataUnit unit;
+    uint64_t bytes;
 
     if (unit_str == "B") {
-      unit = DataUnit::B;
+      bytes = static_cast<uint64_t>(value);
     } else if (unit_str == "KB" || unit_str == "K") {
-      unit = DataUnit::KB;
+      bytes = static_cast<uint64_t>(value) * static_cast<uint64_t>(DataUnit::KB);
     } else if (unit_str == "MB" || unit_str == "M") {
-      unit = DataUnit::MB;
+      bytes = static_cast<uint64_t>(value) * static_cast<uint64_t>(DataUnit::MB);
     } else if (unit_str == "GB" || unit_str == "G") {
-      unit = DataUnit::GB;
+      bytes = static_cast<uint64_t>(value) * static_cast<uint64_t>(DataUnit::GB);
     } else if (unit_str == "TB" || unit_str == "T") {
-      unit = DataUnit::TB;
+      bytes = static_cast<uint64_t>(value) * static_cast<uint64_t>(DataUnit::TB);
     } else if (unit_str == "PB" || unit_str == "P") {
-      unit = DataUnit::PB;
+      bytes = static_cast<uint64_t>(value) * static_cast<uint64_t>(DataUnit::PB);
     } else {
       throw std::runtime_error(fmt::format("Invalid data size unit: {}", unit_str));
     }
-
-    return DataSize<T>(static_cast<uint64_t>(value * (static_cast<uint64_t>(T) / static_cast<uint64_t>(unit))), false);
+    uint64_t unit_size = static_cast<uint64_t>(T);
+    if (bytes % unit_size != 0) {
+      throw std::runtime_error(fmt::format("Invalid data size string (cannot convert to the specified unit without a remainder): {}", str));
+    }
+    return DataSize<T>(bytes / unit_size, false);
   }
 };
 

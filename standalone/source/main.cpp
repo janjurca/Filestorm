@@ -35,38 +35,42 @@ auto main(int argc, char** argv) -> int {
     return 1;
   }
 
+  const struct option long_options[] = {{"help", no_argument, NULL, 'h'}, {"version", no_argument, NULL, 'v'}, {"log", required_argument, NULL, 'l'}, {NULL, 0, NULL, 0}};
+  int opt;
+  while ((opt = getopt_long(argc, argv, "+hvl:", long_options, NULL)) != -1) {
+    switch (opt) {
+      case 'h':
+        // Display help message
+        displayHelp();
+        return 0;
+      case 'v':
+        // Display version information
+        displayVersion();
+        return 0;
+      case 'l':
+        // Set the log level
+        spdlog::set_level(spdlog::level::from_str(optarg));
+        break;
+      case '?':
+        // Handle unknown options or missing arguments
+        break;
+      default:
+        break;
+    }
+  }
   std::string positionalArgument = argv[optind];
   try {
     auto scenario = config.get_scenario(positionalArgument);
     int new_argc = argc - optind;
     char** new_argv = argv + optind;
+    for (size_t i = 0; i < new_argc; i++) {
+      spdlog::debug("new_argv[{}]: {}", i, new_argv[i]);
+    }
+
     scenario->setup(new_argc, new_argv);
     scenario->run();
   } catch (const BadScenarioSelected& e) {
     spdlog::error("Error on main: {}", e.what());
-    const struct option long_options[] = {{"help", no_argument, NULL, 'h'}, {"version", no_argument, NULL, 'v'}, {"log", required_argument, NULL, 'l'}, {NULL, 0, NULL, 0}};
-    int opt;
-    while ((opt = getopt_long(argc, argv, "hvl:", long_options, NULL)) != -1) {
-      switch (opt) {
-        case 'h':
-          // Display help message
-          displayHelp();
-          return 0;
-        case 'v':
-          // Display version information
-          displayVersion();
-          return 0;
-        case 'l':
-          // Set the log level
-          spdlog::set_level(spdlog::level::from_str(optarg));
-          break;
-        case '?':
-          // Handle unknown options or missing arguments
-          break;
-        default:
-          break;
-      }
-    }
     return 1;
   }
 

@@ -18,6 +18,7 @@ FileTree::Node* FileTree::addDirectory(Node* parent, const std::string& dirName)
     throw std::runtime_error("Directory already exists!");
   }
   parent->folders[dirName] = std::make_unique<Node>(dirName, Type::DIRECTORY, parent);
+  all_directories.push_back(parent->folders[dirName].get());
   directory_count++;
   return parent->folders[dirName].get();
 }
@@ -30,6 +31,7 @@ FileTree::Node* FileTree::addFile(Node* parent, const std::string& fileName, lon
     throw std::runtime_error("File already registered!");
   }
   parent->files[fileName] = std::make_unique<Node>(fileName, Type::FILE, parent, size);
+  all_files.push_back(parent->files[fileName].get());
   file_count++;
   return parent->files[fileName].get();
 }
@@ -63,9 +65,11 @@ void FileTree::remove(Node* node) {
     remove(node->files.begin()->second.get());
   }
   if (node->type == Type::DIRECTORY) {
+    all_directories.erase(std::remove(all_directories.begin(), all_directories.end(), node), all_directories.end());
     node->parent->folders.erase(node->name);
     directory_count--;
   } else {
+    all_files.erase(std::remove(all_files.begin(), all_files.end(), node), all_files.end());
     node->parent->files.erase(node->name);
     file_count--;
   }
@@ -146,13 +150,13 @@ FileTree::Node* FileTree::getNode(std::string path) {
       if (part == pathParts.back()) {
         return current->files[part].get();
       } else {
-        throw std::runtime_error("Node doesn't exist!");
+        throw std::runtime_error("Node doesn't exist! (File)");
       }
     }
     if (current->folders.find(part) != current->folders.end()) {
       current = current->folders[part].get();
     } else {
-      throw std::runtime_error("Node doesn't exist!");
+      throw std::runtime_error("Node doesn't exist! (Folder)");
     }
   }
   return current;
@@ -235,49 +239,20 @@ std::string FileTree::newFilePath() {
 }
 
 FileTree::Node* FileTree::randomFile() {
-  unsigned int depth = 0;
-  unsigned int rand_selected_depth = rand() % _max_depth;
-
-  auto current_root = root.get();
-
-  while (depth < rand_selected_depth) {
-    auto current_dir_count = current_root->folders.size();
-    if (current_dir_count == 0) {
-      break;
-    }
-    auto selected_dir_index = rand() % current_dir_count;
-    auto selected_dir = current_root->folders.begin();
-    std::advance(selected_dir, selected_dir_index);
-    current_root = selected_dir->second.get();
-    depth++;
-  }
-
-  auto current_file_count = current_root->files.size();
-  if (current_file_count == 0) {
+  if (all_files.size() == 0) {
     throw std::runtime_error("No files in the tree!");
   }
-  auto selected_file_index = rand() % current_file_count;
-  auto selected_file = current_root->files.begin();
-  std::advance(selected_file, selected_file_index);
-  return selected_file->second.get();
+
+  auto random_file = all_files.begin();
+  std::advance(random_file, rand() % all_files.size());
+  return *random_file;
 }
 
 FileTree::Node* FileTree::randomDirectory() {
-  unsigned int depth = 0;
-  unsigned int rand_selected_depth = rand() % _max_depth;
-
-  auto current_root = root.get();
-
-  while (depth < rand_selected_depth) {
-    auto current_dir_count = current_root->folders.size();
-    if (current_dir_count == 0) {
-      break;
-    }
-    auto selected_dir_index = rand() % current_dir_count;
-    auto selected_dir = current_root->folders.begin();
-    std::advance(selected_dir, selected_dir_index);
-    current_root = selected_dir->second.get();
-    depth++;
+  if (all_directories.size() == 0) {
+    throw std::runtime_error("No directories in the tree!");
   }
-  return current_root;
+  auto random_dir = all_directories.begin();
+  std::advance(random_dir, rand() % all_directories.size());
+  return *random_dir;
 }

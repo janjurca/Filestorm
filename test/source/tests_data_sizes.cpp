@@ -211,6 +211,13 @@ TEST_CASE("DataSize fromString") {
   CHECK(DataSize<DataUnit::TB>::fromString("16tb") == DataSize<DataUnit::TB>(16));
   CHECK(DataSize<DataUnit::PB>::fromString("17pb") == DataSize<DataUnit::PB>(17));
 
+  // Test valid inputs with conversions
+  CHECK(DataSize<DataUnit::B>::fromString("1KB") == DataSize<DataUnit::B>(1024));
+  CHECK(DataSize<DataUnit::KB>::fromString("1MB") == DataSize<DataUnit::KB>(1024));
+  CHECK(DataSize<DataUnit::MB>::fromString("1GB") == DataSize<DataUnit::MB>(1024));
+  CHECK(DataSize<DataUnit::GB>::fromString("1TB") == DataSize<DataUnit::GB>(1024));
+  CHECK(DataSize<DataUnit::TB>::fromString("1PB") == DataSize<DataUnit::TB>(1024));
+
   // Test invalid inputs
   CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("invalid"), std::runtime_error);
   CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("123"), std::runtime_error);
