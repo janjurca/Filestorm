@@ -21,7 +21,7 @@ public:
 
   unsigned int _max_depth;
 
-  struct Node {
+  class Node {
   public:
     std::string name;
     Type type;
@@ -29,7 +29,7 @@ public:
     long size;
     std::map<std::string, std::unique_ptr<Node>> folders;
     std::map<std::string, std::unique_ptr<Node>> files;
-    int extents_count = -1;
+    int extents_count = 0;
 
     Node(const std::string& n, Type t, Node* p, long size = 0) : name(n), type(t), parent(p), size(size) {}
     std::string path(bool include_root = false) const {
@@ -42,22 +42,23 @@ public:
       }
       return parent->path(include_root) + "/" + name;
     }
-    /*
-        int getExtentsCount(bool update = true) {
-          if (extents_count == -1 || update) {
-            if (type == Type::FILE) {
-              extents_count = get_extents(path().c_str()).size();
-            } else {
-              extents_count = 0;
-            }
-          }
-          return extents_count;
+
+    int getExtentsCount(bool update = true) {
+      if (update) {
+        if (type == Type::FILE) {
+          extents_count = get_extents(path(true).c_str()).size();
+        } else {
+          extents_count = 0;
         }
-    */
+      }
+      return extents_count;
+    }
   };
 
   std::vector<Node*> all_files;
   std::vector<Node*> all_directories;
+
+  int64_t total_extents_count = 0;
 
 private:
   std::unique_ptr<Node> root;

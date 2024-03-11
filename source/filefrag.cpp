@@ -1,5 +1,5 @@
 #include <filestorm/filefrag.h>
-
+#include <fmt/core.h>
 struct fiemap_extent_data {
   struct fiemap *fiemap_ptr;
 };
@@ -10,7 +10,7 @@ std::vector<extents> get_extents(const char *file_path) {
   int fd = open(file_path, O_RDONLY);
   if (fd < 0) {
     perror("open");
-    throw std::runtime_error("Error opening file, for extents scan.");
+    throw std::runtime_error(fmt::format("Error opening file [{}], for extents scan.", file_path));
   }
 
   struct fiemap_extent_data fed;

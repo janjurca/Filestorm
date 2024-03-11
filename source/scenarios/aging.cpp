@@ -18,8 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>  // for std::cerr
-#include <iostream>
-#include <memory>  // for std::unique_ptr
+#include <memory>    // for std::unique_ptr
 #include <random>
 #include <string_view>
 
@@ -36,6 +35,8 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("p", "sdist", "File size probabilistic distribution", "uniform"));
   addParameter(Parameter("i", "iterations", "Iterations to run", "1000"));
   addParameter(Parameter("b", "blocksize", "RW operations blocksize", "4k"));
+  addParameter(Parameter("y", "sync", "Sync after each write", "false"));
+  addParameter(Parameter("o", "direct_io", "Use direct IO", "false"));
 }
 
 AgingScenario::~AgingScenario() {}
@@ -81,7 +82,10 @@ void AgingScenario::run() {
   ProbabilisticStateMachine psm(transtions, S);
   std::map<std::string, double> probabilities;
 
+  std::vector<FileTree::Node*> touched_files;
+  Result result;
   while (iteration < getParameter("iterations").get_int()) {
+    result.setIteration(iteration);
     compute_probabilities(probabilities, tree);
     psm.performTransition(probabilities);
     switch (psm.getCurrentState()) {
@@ -101,7 +105,6 @@ void AgingScenario::run() {
         FileTree::Node* file_node = tree.mkfile(tree.newFilePath());
         spdlog::debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
-        spdlog::debug("CREATE_FILE {} with size {}", file_node->path(true), file_size.get_value());
 
         int fd;
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
@@ -111,12 +114,18 @@ void AgingScenario::run() {
 #  error "Windows is not supported"
 #elif __APPLE__
         fd = open(file_node->path(true).c_str(), O_RDWR | O_CREAT, S_IRWXU);
-        if (fcntl(fd, F_NOCACHE, 1) == -1 && fd != -1) {
-          close(fd);
-          throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
+        if (getParameter("direct_io").get_bool() && fd != -1) {
+          if (fcntl(fd, F_NOCACHE, 1) == -1) {
+            close(fd);
+            throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
+          }
         }
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-        fd = open(file_node->path(true).c_str(), O_DIRECT | O_RDWR | O_CREAT, S_IRWXU);
+        int flags = O_RDWR | O_CREAT;
+        if (getParameter("direct_io").get_bool()) {
+          flags |= O_DIRECT;
+        }
+        fd = open(file_node->path(true).c_str(), flags, S_IRWXU);
 #else
 #  error "Unknown system"
 #endif
@@ -127,7 +136,7 @@ void AgingScenario::run() {
           }
           throw std::runtime_error(fmt::format("Error opening file {}", file_node->path(true)));
         }
-        spdlog::debug("CREATE_FILE {} with size {}", file_node->path(true), file_size.get_value());
+        spdlog::debug("CREATE_FILE {} with size {} MB", file_node->path(true), float(file_size.get_value()) / 1024. / 1024.);
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size.get_value(); written_bytes += block_size) {
             write(fd, line.get(), block_size);
@@ -136,6 +145,12 @@ void AgingScenario::run() {
         });
         auto duration = action.exec();
         spdlog::debug(fmt::format("Wrote {} bytes in {} ms", file_size.get_value(), duration.count() / 1000000.0));
+        touched_files.push_back(file_node);
+        result.setAction(Result::Action::CREATE_FILE);
+        result.setOperation(Result::Operation::WRITE);
+        result.setPath(file_node->path(true));
+        result.setSize(file_size);
+        result.setDuration(duration);
         break;
       }
       case CREATE_DIR: {
@@ -143,10 +158,11 @@ void AgingScenario::run() {
         spdlog::debug("CREATE_DIR {}", new_dir_path);
         FileTree::Node* dir_node = tree.mkdir(new_dir_path);
         auto dir_path = dir_node->path(true);
-        spdlog::debug(fmt::format("CREATE_DIR {}", new_dir_path, dir_path));
 
         MeasuredCBAction action([&]() { std::filesystem::create_directory(dir_path); });
         action.exec();
+        result.setAction(Result::Action::CREATE_DIR);
+        result.setPath(dir_path);
         break;
       }
       case ALTER_SMALLER: {
@@ -156,7 +172,12 @@ void AgingScenario::run() {
         auto new_file_size = get_file_size(0, actual_file_size, false);
         spdlog::debug("ALTER_SMALLER {} from {} kB to {} kB", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024);
         MeasuredCBAction action([&]() { truncate(random_file_path.c_str(), new_file_size.convert<DataUnit::B>().get_value()); });
-        action.exec();
+        touched_files.push_back(random_file);
+        auto duration = action.exec();
+        result.setAction(Result::Action::ALTER_SMALLER);
+        result.setPath(random_file_path);
+        result.setSize(new_file_size);
+        result.setDuration(duration);
         break;
       }
       case ALTER_BIGGER: {
@@ -203,6 +224,12 @@ void AgingScenario::run() {
           close(fd);
         });
         auto duration = action.exec();
+        touched_files.push_back(random_file);
+        result.setAction(Result::Action::ALTER_BIGGER);
+        result.setOperation(Result::Operation::WRITE);
+        result.setPath(random_file_path);
+        result.setSize(new_file_size - DataSize<DataUnit::B>(actual_file_size));
+        result.setDuration(duration);
         break;
       }
       case ALTER_METADATA:
@@ -215,16 +242,34 @@ void AgingScenario::run() {
         MeasuredCBAction action([&]() { std::filesystem::remove(random_file_path); });
         action.exec();
         tree.rm(random_file->path(false));
+        result.setAction(Result::Action::DELETE_FILE);
+        result.setPath(random_file_path);
         break;
       }
       case DELETE_DIR: {
         auto random_dir = tree.randomDirectory();
         auto random_dir_path = random_dir->path(true);
         spdlog::debug("DELETE_DIR {}", random_dir_path);
+        // TODO: remove directory Is it necesary and good idea at all?
         break;
       }
       case END:
         spdlog::debug("END");
+        if (getParameter("sync").get_bool()) {
+          spdlog::debug("Syncing...");
+          sync();
+        }
+        for (auto& file : touched_files) {
+          auto original_extents = file->getExtentsCount(false);
+          auto updated_extents = file->getExtentsCount(true);
+          spdlog::debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents);
+          tree.total_extents_count += updated_extents - original_extents;
+        }
+        spdlog::debug("Total extents count: {}", tree.total_extents_count);
+        touched_files.clear();
+        result.commit();
+        result = Result();
+
         iteration++;
         break;
 
@@ -236,7 +281,7 @@ void AgingScenario::run() {
   }
 
   // Count files and total extent count
-  /*
+
   int file_count = 0;
   int total_extents = 0;
   for (auto& file : tree.all_files) {
@@ -244,7 +289,7 @@ void AgingScenario::run() {
     total_extents += file->getExtentsCount();
   }
   spdlog::info("File count: {}, total extents: {}", file_count, total_extents);
-*/
+
   // cleanup
   for (auto& file : tree.all_files) {
     std::filesystem::remove(file->path(true));
@@ -318,6 +363,6 @@ DataSize<DataUnit::B> AgingScenario::get_file_size() {
   auto max_size = DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>();
   auto min_size = DataSize<DataUnit::B>::fromString(getParameter("minfsize").get_string()).convert<DataUnit::B>();
   auto fsize = get_file_size(min_size.get_value(), max_size.get_value());
-  spdlog::debug("get_file_size: {} - {} : {} / {}", min_size.get_value(), max_size.get_value(), fsize.get_value());
+  spdlog::debug("get_file_size: {} - {} : {} ", min_size.get_value(), max_size.get_value(), fsize.get_value());
   return fsize;
 }

@@ -69,6 +69,7 @@ auto main(int argc, char** argv) -> int {
 
     scenario->setup(new_argc, new_argv);
     scenario->run();
+    scenario->save();
   } catch (const BadScenarioSelected& e) {
     spdlog::error("Error on main: {}", e.what());
     return 1;

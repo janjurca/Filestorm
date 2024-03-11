@@ -64,6 +64,7 @@ public:
   void addParameter(Parameter parameter) { _parameters.push_back(parameter); };
   Parameter getParameter(const std::string& name) const;
   virtual void run();
+  virtual void save();
 };
 
 class BasicScenario : public Scenario {
