@@ -47,7 +47,7 @@ std::vector<extents> get_extents(const char *file_path) {
 #else
   static bool warning_printed = false;
   if (!warning_printed) {
-    spdlog::debug("This code is for Linux only and the fragmentation monitorning wont be available on other platforms.");
+    spdlog::debug("This code is for Linux only and the fragmentation monitorning wont be available on other platforms. {}", file_path);
     warning_printed = true;
   }
   return {};
