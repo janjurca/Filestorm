@@ -44,7 +44,7 @@ void Scenario::setup(int argc, char** argv) {
 void Scenario::run() {}
 
 void Scenario::save() {
-  filename = getParameter("save").get_string();
+  auto filename = getParameter("save").get_string();
   spdlog::info("Saving results to {}", filename);
   Result::save(filename);
 }
