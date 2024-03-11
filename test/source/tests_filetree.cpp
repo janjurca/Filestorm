@@ -149,7 +149,7 @@ TEST_CASE("FileTree rm") {
     REQUIRE(createdFile != nullptr);
 
     fileTree.rm("toRemove.txt");
-    CHECK_THROWS_WITH_AS(fileTree.getNode("toRemove.txt"), "Node doesn't exist!", std::runtime_error);
+    CHECK_THROWS_WITH_AS(fileTree.getNode("toRemove.txt"), "Node doesn't exist! (Folder)", std::runtime_error);
   }
 
   SUBCASE("Remove directory recursively") {
@@ -160,7 +160,7 @@ TEST_CASE("FileTree rm") {
     fileTree.mkfile("toRemoveDir/file2.txt");
 
     fileTree.rm("toRemoveDir", true);
-    CHECK_THROWS_WITH_AS(fileTree.getNode("toRemoveDir"), "Node doesn't exist!", std::runtime_error);
+    CHECK_THROWS_WITH_AS(fileTree.getNode("toRemoveDir"), "Node doesn't exist! (Folder)", std::runtime_error);
   }
 
   SUBCASE("Remove non-empty directory non-recursively") {
