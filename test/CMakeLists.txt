@@ -20,7 +20,9 @@ CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
 CPMAddPackage(
     NAME nlohmann_json
     GITHUB_REPOSITORY nlohmann/json
-    VERSION 3.11.3)
+    VERSION 3.9.1
+    OPTIONS "JSON_BuildTests OFF"
+    )
 
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
