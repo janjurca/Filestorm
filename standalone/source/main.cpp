@@ -63,7 +63,7 @@ auto main(int argc, char** argv) -> int {
     auto scenario = config.get_scenario(positionalArgument);
     int new_argc = argc - optind;
     char** new_argv = argv + optind;
-    for (size_t i = 0; i < new_argc; i++) {
+    for (int i = 0; i < new_argc; i++) {
       spdlog::debug("new_argv[{}]: {}", i, new_argv[i]);
     }
 
