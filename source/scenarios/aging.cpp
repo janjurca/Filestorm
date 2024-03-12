@@ -299,10 +299,7 @@ void AgingScenario::run() {
   for (auto& file : tree.all_files) {
     std::filesystem::remove(file->path(true));
   }
-  tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Node* dir) {
-    std::cout << "Removing " << dir->path(true) << std::endl;
-    std::filesystem::remove(dir->path(true));
-  });
+  tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Node* dir) { std::filesystem::remove(dir->path(true)); });
 }
 
 void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree) {
