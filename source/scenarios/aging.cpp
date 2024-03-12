@@ -192,7 +192,7 @@ void AgingScenario::run() {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
-        auto new_file_size = get_file_size(actual_file_size, 0);
+        auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value();
         spdlog::debug("ALTER_BIGGER {} from {} to {}", random_file_path, actual_file_size, new_file_size);
         int fd;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
