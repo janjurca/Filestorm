@@ -33,10 +33,11 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("S", "maxfsize", "Max file size", "1G"));
   addParameter(Parameter("s", "minfsize", "Min file size", "10KB"));
   addParameter(Parameter("p", "sdist", "File size probabilistic distribution", "uniform"));
-  addParameter(Parameter("i", "iterations", "Iterations to run", "1000"));
+  addParameter(Parameter("i", "iterations", "Iterations to run", "-1"));
   addParameter(Parameter("b", "blocksize", "RW operations blocksize", "4k"));
   addParameter(Parameter("y", "sync", "Sync after each write", "false"));
   addParameter(Parameter("o", "direct_io", "Use direct IO", "false"));
+  addParameter(Parameter("t", "time", "Max Time to run", "20m"));
 }
 
 AgingScenario::~AgingScenario() {}
@@ -75,6 +76,8 @@ void AgingScenario::run() {
   transtions.emplace("END->S", Transition(END, S, "p1"));
 
   int iteration = 0;
+  std::chrono::seconds max_time = stringToChrono(getParameter("time").get_string());
+  auto start = std::chrono::high_resolution_clock::now();
   // progressbar bar(getParameter("iterations").get_int());
 
   std::vector<Result> results;
@@ -84,7 +87,8 @@ void AgingScenario::run() {
 
   std::vector<FileTree::Node*> touched_files;
   Result result;
-  while (iteration < getParameter("iterations").get_int()) {
+  while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
+         && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
     result.setIteration(iteration);
     compute_probabilities(probabilities, tree);
     psm.performTransition(probabilities);
@@ -160,9 +164,10 @@ void AgingScenario::run() {
         auto dir_path = dir_node->path(true);
 
         MeasuredCBAction action([&]() { std::filesystem::create_directory(dir_path); });
-        action.exec();
+        auto duration = action.exec();
         result.setAction(Result::Action::CREATE_DIR);
         result.setPath(dir_path);
+        result.setDuration(duration);
         break;
       }
       case ALTER_SMALLER: {
@@ -294,9 +299,10 @@ void AgingScenario::run() {
   for (auto& file : tree.all_files) {
     std::filesystem::remove(file->path(true));
   }
-  // for (auto& dir : tree.all_directories) {
-  //   std::filesystem::remove(dir->path(true));
-  // }
+  tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Node* dir) {
+    std::cout << "Removing " << dir->path(true) << std::endl;
+    std::filesystem::remove(dir->path(true));
+  });
 }
 
 void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree) {

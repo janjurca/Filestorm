@@ -47,6 +47,34 @@ public:
 
   void commit() { results.push_back(*this); }
 
+  static constexpr const char* actionToString(Action action) {
+    switch (action) {
+      case DELETE_FILE:
+        return "DELETE_FILE";
+      case CREATE_FILE:
+        return "CREATE_FILE";
+      case CREATE_DIR:
+        return "CREATE_DIR";
+      case ALTER_SMALLER:
+        return "ALTER_SMALLER";
+      case ALTER_BIGGER:
+        return "ALTER_BIGGER";
+      default:
+        return "Unknown Action";
+    }
+  }
+
+  static constexpr const char* operationToString(Operation operation) {
+    switch (operation) {
+      case WRITE:
+        return "WRITE";
+      case READ:
+        return "READ";
+      default:
+        return "Unknown Operation";
+    }
+  }
+
   static void save(const std::string& filename) {
     // Save all results to a JSON file
     std::ofstream file(filename);
@@ -55,8 +83,8 @@ public:
       for (const auto& result : results) {
         nlohmann::json jsonResult;
         jsonResult["iteration"] = result.getIteration();
-        jsonResult["action"] = result.getAction();
-        jsonResult["operation"] = result.getOperation();
+        jsonResult["action"] = actionToString(result.getAction());
+        jsonResult["operation"] = operationToString(result.getOperation());
         jsonResult["path"] = result.getPath();
         jsonResult["size"] = result.getSize().get_value();
         jsonResult["duration"] = result.getDuration().count();

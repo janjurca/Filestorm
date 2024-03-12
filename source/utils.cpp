@@ -66,3 +66,20 @@ double ceilTo(double value, int decimals) {
   double factor = std::pow(10, decimals);
   return std::ceil(value * factor) / factor;
 }
+
+std::chrono::seconds stringToChrono(const std::string& timeString) {
+  char unit = timeString.back();                                         // Get the last character as unit
+  std::string numberPart = timeString.substr(0, timeString.size() - 1);  // Extract numeric part
+  int timeValue = std::stoi(numberPart);                                 // Convert to integer
+
+  switch (unit) {
+    case 'h':  // Hours
+      return std::chrono::hours(timeValue);
+    case 'm':  // Minutes
+      return std::chrono::minutes(timeValue);
+    case 's':  // Seconds
+      return std::chrono::seconds(timeValue);
+    default:
+      throw std::invalid_argument("Unsupported time unit");
+  }
+}

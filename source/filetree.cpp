@@ -2,6 +2,8 @@
 #include <filestorm/utils.h>
 #include <fmt/format.h>  // Include the necessary header file
 
+#include <queue>
+
 std::atomic<int> FileTree::directory_count(0);
 std::atomic<int> FileTree::file_count(0);
 
@@ -255,4 +257,37 @@ FileTree::Node* FileTree::randomDirectory() {
   auto random_dir = all_directories.begin();
   std::advance(random_dir, rand() % all_directories.size());
   return *random_dir;
+}
+
+void FileTree::leafDirWalk(std::function<void(Node*)> f) {
+  std::queue<Node*> q;
+  q.push(root.get());
+  while (!q.empty()) {
+    auto current = q.front();
+    q.pop();
+    if (current->folders.size() == 0) {
+      f(current);
+    } else {
+      for (const auto& child : current->folders) {
+        q.push(child.second.get());
+      }
+    }
+  }
+}
+
+void FileTree::bottomUpDirWalk(Node* node, std::function<void(Node*)> f) {
+  if (node->folders.size() == 0) {
+    if (node != root.get()) {
+      f(node);
+    }
+    // f(node);
+  } else {
+    for (const auto& child : node->folders) {
+      bottomUpDirWalk(child.second.get(), f);
+    }
+    if (node != root.get()) {
+      f(node);
+    }
+    // f(node);
+  }
 }

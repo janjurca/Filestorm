@@ -88,6 +88,9 @@ public:
   Node* randomFile();
   Node* randomDirectory();
 
+  void leafDirWalk(std::function<void(Node*)> f);
+  void bottomUpDirWalk(Node* node, std::function<void(Node*)> f);
+
 private:
   void printRec(const Node* node, int depth) const;
 };

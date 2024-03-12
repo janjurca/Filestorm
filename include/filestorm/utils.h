@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>  // Make sure this is included
+#include <chrono>
 #include <random>
 #include <random>  // Assuming you're using random number generation
 #include <string>
@@ -22,3 +23,4 @@ inline void generate_random_chunk(char* chunk, size_t size) {
 }
 
 double ceilTo(double value, int decimals);
+std::chrono::seconds stringToChrono(const std::string& timeString);
