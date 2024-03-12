@@ -68,7 +68,10 @@ void AgingScenario::run() {
   transtions.emplace("DELETE->DELETE_DIR", Transition(DELETE, DELETE_DIR, "pDD"));
   transtions.emplace("CREATE_FILE->END", Transition(CREATE_FILE, END, "p1"));
   transtions.emplace("CREATE_DIR->END", Transition(CREATE_DIR, END, "p1"));
-  transtions.emplace("ALTER_SMALLER->END", Transition(ALTER_SMALLER, END, "p1"));
+  transtions.emplace("ALTER_SMALLER->ALTER_SMALLER_TRUNCATE", Transition(ALTER_SMALLER, ALTER_SMALLER_TRUNCATE, "pAST"));
+  transtions.emplace("ALTER_SMALLER->ALTER_SMALLER_FALLOCATE", Transition(ALTER_SMALLER, ALTER_SMALLER_FALLOCATE, "pASF"));
+  transtions.emplace("ALTER_SMALLER_TRUNCATE->END", Transition(ALTER_SMALLER_TRUNCATE, END, "p1"));
+  transtions.emplace("ALTER_SMALLER_FALLOCATE->END", Transition(ALTER_SMALLER_FALLOCATE, END, "p1"));
   transtions.emplace("ALTER_BIGGER->END", Transition(ALTER_BIGGER, END, "p1"));
   transtions.emplace("ALTER_METADATA->END", Transition(ALTER_METADATA, END, "p1"));
   transtions.emplace("DELETE_FILE->END", Transition(DELETE_FILE, END, "p1"));
@@ -171,6 +174,11 @@ void AgingScenario::run() {
         break;
       }
       case ALTER_SMALLER: {
+        spdlog::debug("ALTER_SMALLER");
+        break;
+      }
+      case ALTER_SMALLER_TRUNCATE: {
+        spdlog::debug("ALTER_SMALLER_TRUNCATE");
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
@@ -180,10 +188,49 @@ void AgingScenario::run() {
         MeasuredCBAction action([&]() { truncate(random_file_path.c_str(), new_file_size.convert<DataUnit::B>().get_value()); });
         touched_files.push_back(random_file);
         auto duration = action.exec();
-        result.setAction(Result::Action::ALTER_SMALLER);
+        result.setAction(Result::Action::ALTER_SMALLER_TRUNCATE);
         result.setPath(random_file_path);
         result.setSize(new_file_size);
         result.setDuration(duration);
+        break;
+      }
+      case ALTER_SMALLER_FALLOCATE: {
+        spdlog::debug("ALTER_SMALLER_FALLOCATE");
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#  error "Windows is not supported"
+#elif __APPLE__
+#  warning "FALLOCATE not supported on macOS"
+        throw std::runtime_error("FALLOCATE not supported on this system");
+#elif __linux__ || __unix__ || defined(_POSIX_VERSION)
+        auto random_file = tree.randomFile();
+        auto random_file_path = random_file->path(true);
+        auto actual_file_size = fs_utils::file_size(random_file_path);
+        double hole_size = d_rand(0.1, 0.3);
+        size_t hole_start = (actual_file_size - actual_file_size * hole_size) * d_rand(0, 1);
+        size_t hole_end = hole_start + actual_file_size * hole_size;
+        // Round to modulo blocksize
+        auto block_size = get_block_size().convert<DataUnit::B>().get_value();
+        hole_start = hole_start - (hole_start % block_size);
+        hole_end = hole_end - (hole_end % block_size);
+        spdlog::debug("ALTER_SMALLER_FALLOCATE {} from {} to {} with hole {} - {}", random_file_path, actual_file_size, actual_file_size - hole_size, hole_start, hole_end);
+        MeasuredCBAction action([&]() {
+          int fd = open(random_file_path.c_str(), O_RDWR);
+          if (fd == -1) {
+            std::cerr << "Error opening file: " << strerror(errno) << std::endl;
+            throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
+          }
+          fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, hole_start, hole_end - hole_start);
+          close(fd);
+        });
+        touched_files.push_back(random_file);
+        auto duration = action.exec();
+        result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
+        result.setPath(random_file_path);
+        result.setSize(DataSize<DataUnit::B>(hole_size));
+        result.setDuration(duration);
+#else
+        throw std::runtime_error("FALLOCATE not supported on this system");
+#endif
         break;
       }
       case ALTER_BIGGER: {
@@ -319,6 +366,13 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pAM"] = 0.1;
   probabilities["pAB"] = caf - probabilities["pAM"];
   probabilities["pAS"] = 1 - probabilities["pAM"] - probabilities["pAB"];
+#if __linux__
+  probabilities["pAST"] = 0.1;
+  probabilities["pASF"] = 1 - probabilities["pAST"];
+#else
+  probabilities["pAST"] = 1;
+  probabilities["pASF"] = 0;
+#endif
   probabilities["pDD"] = 0.01;
   probabilities["pDF"] = 1 - probabilities["pDD"];
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
@@ -330,6 +384,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
                                        probabilities["pC"], probabilities["pD"], probabilities["pA"], probabilities["pC"] + probabilities["pD"] + probabilities["pA"]);
   logMessage += fmt::format("pAM: {:.2f}, pAB: {:.2f}, pAS: {:.2f}, sum pA {:.2f} ", probabilities["pAM"], probabilities["pAB"], probabilities["pAS"],
                             probabilities["pAM"] + probabilities["pAB"] + probabilities["pAS"]);
+  logMessage += fmt::format("pAST: {:.2f}, pASF: {:.2f}, sum pAS {:.2f} ", probabilities["pAST"], probabilities["pASF"], probabilities["pAST"] + probabilities["pASF"]);
   logMessage += fmt::format("pDD: {:.2f}, pDF: {:.2f}, sum pD {:.2f} ", probabilities["pDD"], probabilities["pDF"], probabilities["pDD"] + probabilities["pDF"]);
   logMessage += fmt::format("pCF: {:.2f}, pCD: {:.2f}, sum pC {:.2f} ", probabilities["pCF"], probabilities["pCD"], probabilities["pCF"] + probabilities["pCD"]);
   spdlog::debug(logMessage);

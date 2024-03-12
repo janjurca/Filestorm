@@ -83,3 +83,8 @@ std::chrono::seconds stringToChrono(const std::string& timeString) {
       throw std::invalid_argument("Unsupported time unit");
   }
 }
+
+double d_rand(double dMin, double dMax) {
+  // Generate a random double between dMin and dMax
+  return dMin + (dMax - dMin) * (std::rand() / (RAND_MAX + 1.0));
+}

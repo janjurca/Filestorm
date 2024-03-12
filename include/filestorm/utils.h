@@ -24,3 +24,5 @@ inline void generate_random_chunk(char* chunk, size_t size) {
 
 double ceilTo(double value, int decimals);
 std::chrono::seconds stringToChrono(const std::string& timeString);
+
+double d_rand(double dMin, double dMax);

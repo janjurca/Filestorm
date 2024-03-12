@@ -10,8 +10,8 @@
 
 class Result {
 public:
-  enum Action { DELETE_FILE, CREATE_FILE, CREATE_DIR, ALTER_SMALLER, ALTER_BIGGER };
-  enum Operation { WRITE, READ };
+  enum Action { DELETE_FILE, CREATE_FILE, CREATE_DIR, ALTER_SMALLER_TRUNCATE, ALTER_SMALLER_FALLOCATE, ALTER_BIGGER };
+  enum Operation { WRITE, TRIM };
   static std::vector<Result> results;
 
 private:
@@ -55,8 +55,10 @@ public:
         return "CREATE_FILE";
       case CREATE_DIR:
         return "CREATE_DIR";
-      case ALTER_SMALLER:
-        return "ALTER_SMALLER";
+      case ALTER_SMALLER_TRUNCATE:
+        return "ALTER_SMALLER_TRUNCATE";
+      case ALTER_SMALLER_FALLOCATE:
+        return "ALTER_SMALLER_FALLOCATE";
       case ALTER_BIGGER:
         return "ALTER_BIGGER";
       default:
@@ -68,8 +70,8 @@ public:
     switch (operation) {
       case WRITE:
         return "WRITE";
-      case READ:
-        return "READ";
+      case TRIM:
+        return "TRIM";
       default:
         return "Unknown Operation";
     }
