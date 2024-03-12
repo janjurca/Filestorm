@@ -34,7 +34,7 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("s", "minfsize", "Min file size", "10KB"));
   addParameter(Parameter("p", "sdist", "File size probabilistic distribution", "uniform"));
   addParameter(Parameter("i", "iterations", "Iterations to run", "-1"));
-  addParameter(Parameter("b", "blocksize", "RW operations blocksize", "4k"));
+  addParameter(Parameter("b", "blocksize", "RW operations blocksize", "64k"));
   addParameter(Parameter("y", "sync", "Sync after each write", "false"));
   addParameter(Parameter("o", "direct_io", "Use direct IO", "false"));
   addParameter(Parameter("t", "time", "Max Time to run", "20m"));
@@ -174,7 +174,8 @@ void AgingScenario::run() {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
-        auto new_file_size = get_file_size(0, actual_file_size, false);
+        // auto new_file_size = get_file_size(0, actual_file_size, false);
+        auto new_file_size = get_file_size(DataSize<DataUnit::B>::fromString(getParameter("minfsize").get_string()).convert<DataUnit::B>().get_value(), actual_file_size);
         spdlog::debug("ALTER_SMALLER {} from {} kB to {} kB", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024);
         MeasuredCBAction action([&]() { truncate(random_file_path.c_str(), new_file_size.convert<DataUnit::B>().get_value()); });
         touched_files.push_back(random_file);
