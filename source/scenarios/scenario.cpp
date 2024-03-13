@@ -2,7 +2,7 @@
 #include <filestorm/scenarios/scenario.h>
 #include <fmt/format.h>
 
-#include <filestorm/cxxopts.hpp>
+#include <cxxopts.hpp>
 #include <iostream>
 
 Scenario::Scenario() {
