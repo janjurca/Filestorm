@@ -49,7 +49,7 @@ target_link_libraries(
   fmt::fmt
   spdlog::spdlog
   nlohmann_json::nlohmann_json
-  cxxopts::cxxopts
+  cxxopts
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 
