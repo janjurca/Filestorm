@@ -1,7 +1,51 @@
 #include <doctest/doctest.h>
 #include <filestorm/utils.h>
 
+#include <algorithm>  // For std::count
+#include <cstring>    // For memset
+#include <numeric>    // For std::iota
 #include <stdexcept>
+#include <vector>
+
+TEST_CASE("Testing generate_random_chunk function") {
+  const size_t chunkSize = 1024;
+  char chunk[chunkSize];
+
+  SUBCASE("Generates the correct number of bytes") {
+    memset(chunk, 0, chunkSize);  // Clear chunk to a known state
+    generate_random_chunk(chunk, chunkSize);
+    // This test relies on the assumption that it's highly improbable for a random byte to be 0
+    size_t nonZeroBytes = std::count_if(chunk, chunk + chunkSize, [](char c) { return c != 0; });
+    CHECK(nonZeroBytes > 0);
+  }
+
+  SUBCASE("Repeat calls produce different data") {
+    char chunk2[chunkSize];
+    generate_random_chunk(chunk, chunkSize);
+    generate_random_chunk(chunk2, chunkSize);
+    bool identical = std::equal(chunk, chunk + chunkSize, chunk2);
+    CHECK_FALSE(identical);
+  }
+
+  SUBCASE("Distribution check - rudimentary") {
+    // Increase the sample size for a better check
+    const size_t largeChunkSize = 1024 * 1024;  // 1 MB
+    std::vector<char> largeChunk(largeChunkSize);
+    generate_random_chunk(largeChunk.data(), largeChunkSize);
+
+    // Count occurrences of each byte value
+    std::vector<size_t> counts(256, 0);
+    for (unsigned char c : largeChunk) {
+      counts[c]++;
+    }
+
+    // Check if each possible byte value was generated at least once
+    // This is a very basic check and may need to be adjusted based on your needs
+    bool allValuesGenerated = std::all_of(counts.begin(), counts.end(), [](size_t count) { return count > 0; });
+    CHECK(allValuesGenerated);
+  }
+}
+
 TEST_CASE("split function test") {
   SUBCASE("splitting a string with a single delimiter") {
     std::string str = "Hello,World";

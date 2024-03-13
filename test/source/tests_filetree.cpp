@@ -139,6 +139,15 @@ TEST_CASE("FileTree mkfile") {
     CHECK(existingFile->name == "existingFile.txt");
     CHECK(existingFile->type == FileTree::Type::FILE);
   }
+
+  SUBCASE("Create file and get its path") {
+    auto createdFile = fileTree.mkfile("newFile.txt");
+    REQUIRE(createdFile != nullptr);
+
+    CHECK(createdFile->path(true) == "root/newFile.txt");
+    CHECK(createdFile->path() == "/newFile.txt");
+    CHECK(createdFile->path(false) == "/newFile.txt");
+  }
 }
 
 TEST_CASE("FileTree rm") {

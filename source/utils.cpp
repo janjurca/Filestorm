@@ -88,3 +88,11 @@ double d_rand(double dMin, double dMax) {
   // Generate a random double between dMin and dMax
   return dMin + (dMax - dMin) * (std::rand() / (RAND_MAX + 1.0));
 }
+
+void generate_random_chunk(char* chunk, size_t size) {
+  static std::random_device rd;
+  static std::mt19937 gen(rd());
+  static std::uniform_int_distribution<> dis(0, 255);
+
+  std::generate_n(chunk, size, []() { return dis(gen); });
+}
