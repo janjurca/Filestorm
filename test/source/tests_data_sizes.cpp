@@ -65,6 +65,8 @@ TEST_CASE("Conversion") {
 TEST_CASE("DataSize Constructor and get_value()") {
   DataSize<DataUnit::KB> kilobytes(1024);
   CHECK(kilobytes.get_value() == 1024);
+  DataSize<DataUnit::KB> zero;
+  CHECK(zero.get_value() == 0);
 }
 
 TEST_CASE("DataSize Arithmetic Operations") {
@@ -225,4 +227,5 @@ TEST_CASE("DataSize fromString") {
   CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("1.5B"), std::runtime_error);
   CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("123 MB"), std::runtime_error);
   CHECK_THROWS_AS(DataSize<DataUnit::B>::fromString("invalid unit"), std::runtime_error);
+  CHECK_THROWS_AS(DataSize<DataUnit::GB>::fromString("256KB"), std::runtime_error);
 }

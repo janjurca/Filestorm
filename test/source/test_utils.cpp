@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 #include <filestorm/utils.h>
 
+#include <stdexcept>
 TEST_CASE("split function test") {
   SUBCASE("splitting a string with a single delimiter") {
     std::string str = "Hello,World";
