@@ -1,7 +1,6 @@
 #pragma once
 
 #include <filestorm/scenarios/scenario.h>
-#include <filestorm/testrun.h>
 
 #include <iostream>
 #include <stdexcept>
