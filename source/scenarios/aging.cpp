@@ -212,7 +212,7 @@ void AgingScenario::run() {
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
         hole_start = hole_start - (hole_start % block_size);
         hole_end = hole_end - (hole_end % block_size);
-        spdlog::debug("ALTER_SMALLER_FALLOCATE {} from {} to {} with hole {} - {}", random_file_path, actual_file_size, actual_file_size - hole_size, hole_start, hole_end);
+        spdlog::debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, actual_file_size, hole_start, hole_end);
         MeasuredCBAction action([&]() {
           int fd = open(random_file_path.c_str(), O_RDWR);
           if (fd == -1) {
