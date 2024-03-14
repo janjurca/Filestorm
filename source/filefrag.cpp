@@ -5,6 +5,12 @@ struct fiemap_extent_data {
 };
 
 std::vector<extents> get_extents(const char *file_path) {
+  if (file_path == nullptr) {
+    throw std::runtime_error("File path is null.");
+  }
+  if (access(file_path, F_OK) == -1) {
+    throw std::runtime_error(fmt::format("File [{}] does not exist.", file_path));
+  }
 #if defined(__linux__)
   std::vector<extents> extents_list;
   int fd = open(file_path, O_RDONLY);
