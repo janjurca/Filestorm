@@ -33,14 +33,10 @@ CPMAddPackage(
   VERSION 3.9.1
   OPTIONS "JSON_BuildTests OFF"
 )
-CPMAddPackage(
-  GITHUB_REPOSITORY jarro2783/cxxopts
-  VERSION 2.2.1
-  OPTIONS "CXXOPTS_BUILD_EXAMPLES NO" "CXXOPTS_BUILD_TESTS NO" "CXXOPTS_ENABLE_INSTALL YES"
-)
 
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(cxxopts REQUIRED)
 
 # ---- Add source files ----
 
@@ -59,9 +55,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 # Link dependencies
-target_link_libraries(
-  ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json cxxopts
-)
+target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json)
 
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -84,7 +78,7 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "spdlog;fmt" CPACK YES
+  DEPENDENCIES "spdlog;fmt;cxxopts" CPACK YES
 )
 
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
@@ -102,7 +96,7 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
 )
 
 set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
-set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, git")
+set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, git, cxxopts-devel")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
 
