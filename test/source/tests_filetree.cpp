@@ -191,3 +191,22 @@ TEST_CASE("FileTree rm") {
     // No crashes or unexpected behavior should occur
   }
 }
+
+TEST_CASE("getExtentsCount for folder node") {
+  // Setup: Create a folder node (folders should not have extents)
+  FileTree::Node folderNode("folder", FileTree::Type::DIRECTORY, nullptr);
+  SUBCASE("update is true") {
+    // Action
+    int count = folderNode.getExtentsCount(true);
+    // Assert
+    CHECK(count == 0);
+  }
+
+  SUBCASE("update is false") {
+    // Action
+    int count = folderNode.getExtentsCount(false);
+
+    // Assert
+    CHECK(count == 0);
+  }
+}
