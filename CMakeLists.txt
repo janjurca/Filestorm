@@ -27,16 +27,13 @@ include(cmake/CPM.cmake)
 
 # PackageProject.cmake will be used to make our target installable
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.11.1")
-CPMAddPackage(
-  NAME nlohmann_json
-  GITHUB_REPOSITORY nlohmann/json
-  VERSION 3.9.1
-  OPTIONS "JSON_BuildTests OFF"
-)
+# CPMAddPackage( NAME nlohmann_json GITHUB_REPOSITORY nlohmann/json VERSION 3.9.1 OPTIONS
+# "JSON_BuildTests OFF" )
 
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(cxxopts REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 # ---- Add source files ----
 
@@ -96,7 +93,9 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
 )
 
 set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
-set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, git, cxxopts-devel")
+set(CPACK_RPM_BUILDREQUIRES
+    "cmake, gcc-c++, spdlog-devel, fmt-devel, git, cxxopts-devel, json-devel"
+)
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
 

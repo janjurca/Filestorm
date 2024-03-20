@@ -17,16 +17,13 @@ include(../cmake/CPM.cmake)
 
 CPMAddPackage("gh:doctest/doctest@2.4.9")
 CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
-CPMAddPackage(
-  NAME nlohmann_json
-  GITHUB_REPOSITORY nlohmann/json
-  VERSION 3.9.1
-  OPTIONS "JSON_BuildTests OFF"
-)
+# CPMAddPackage( NAME nlohmann_json GITHUB_REPOSITORY nlohmann/json VERSION 3.9.1 OPTIONS
+# "JSON_BuildTests OFF" )
 
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(cxxopts REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 if(TEST_INSTALLED_VERSION)
   find_package(filestorm REQUIRED)

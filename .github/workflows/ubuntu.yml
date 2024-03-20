@@ -23,7 +23,7 @@ jobs:
       - name: install_dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake g++ make libspdlog-dev libfmt-dev git libcxxopts-dev
+          sudo apt install -y cmake g++ make libspdlog-dev libfmt-dev git libcxxopts-dev nlohmann-json3-dev
 
       - uses: actions/checkout@v4
         with:
