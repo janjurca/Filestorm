@@ -292,11 +292,14 @@ void AgingScenario::run() {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         spdlog::debug("DELETE_FILE {}", random_file_path);
+        auto file_extents = random_file->getExtentsCount(true);
+
         MeasuredCBAction action([&]() { std::filesystem::remove(random_file_path); });
         action.exec();
         tree.rm(random_file->path(false));
         result.setAction(Result::Action::DELETE_FILE);
         result.setPath(random_file_path);
+        tree.total_extents_count -= file_extents;
         break;
       }
       case DELETE_DIR: {
