@@ -390,6 +390,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
 #if true
   std::string logMessage = fmt::format("Capacity: {} MB | available: {} MB | pC: {:.4f}, pD: {:.4f}, pA: {:.4f}, sum p {:.4f} ", fs_status.capacity / 1024 / 1024, fs_status.available / 1024 / 1024,
                                        probabilities["pC"], probabilities["pD"], probabilities["pA"], probabilities["pC"] + probabilities["pD"] + probabilities["pA"]);
+  logMessage += fmt::format("Capacity: {} B | available: {} B ", fs_status.capacity, fs_status.available);
   logMessage += fmt::format("pAM: {:.2f}, pAB: {:.2f}, pAS: {:.2f}, sum pA {:.2f} ", probabilities["pAM"], probabilities["pAB"], probabilities["pAS"],
                             probabilities["pAM"] + probabilities["pAB"] + probabilities["pAS"]);
   logMessage += fmt::format("pAST: {:.2f}, pASF: {:.2f}, sum pAS {:.2f} ", probabilities["pAST"], probabilities["pASF"], probabilities["pAST"] + probabilities["pASF"]);
