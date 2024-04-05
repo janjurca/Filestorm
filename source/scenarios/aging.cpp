@@ -98,16 +98,16 @@ void AgingScenario::run() {
     psm.performTransition(probabilities);
     switch (psm.getCurrentState()) {
       case S:
-        spdlog::debug("S");
+        // spdlog::debug("S");
         break;
       case CREATE:
-        spdlog::debug("CREATE");
+        // spdlog::debug("CREATE");
         break;
       case ALTER:
-        spdlog::debug("ALTER");
+        // spdlog::debug("ALTER");
         break;
       case DELETE:
-        spdlog::debug("DELETE");
+        // spdlog::debug("DELETE");
         break;
       case CREATE_FILE: {
         FileTree::Node* file_node = tree.mkfile(tree.newFilePath());
@@ -144,7 +144,6 @@ void AgingScenario::run() {
           }
           throw std::runtime_error(fmt::format("Error opening file {}", file_node->path(true)));
         }
-        spdlog::debug("CREATE_FILE {} with size {} MB", file_node->path(true), float(file_size.get_value()) / 1024. / 1024.);
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size.get_value(); written_bytes += block_size) {
             write(fd, line.get(), block_size);
@@ -152,8 +151,8 @@ void AgingScenario::run() {
           close(fd);
         });
         auto duration = action.exec();
-        spdlog::debug(
-            fmt::format("Wrote {} bytes in {} ms | Speed {} MB/s", file_size.get_value(), duration.count() / 1000000.0, (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+        spdlog::debug(fmt::format("CREATE_FILE {} Wrote {} bytes in {} ms | Speed {} MB/s", file_node->path(true), file_size.get_value(), duration.count() / 1000000.0,
+                                  (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         touched_files.push_back(file_node);
         result.setAction(Result::Action::CREATE_FILE);
         result.setOperation(Result::Operation::WRITE);
@@ -439,6 +438,6 @@ DataSize<DataUnit::B> AgingScenario::get_file_size() {
   auto max_size = DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>();
   auto min_size = DataSize<DataUnit::B>::fromString(getParameter("minfsize").get_string()).convert<DataUnit::B>();
   auto fsize = get_file_size(min_size.get_value(), max_size.get_value());
-  spdlog::debug("get_file_size: {} - {} : {} ", min_size.get_value(), max_size.get_value(), fsize.get_value());
+  // spdlog::debug("get_file_size: {} - {} : {} ", min_size.get_value(), max_size.get_value(), fsize.get_value());
   return fsize;
 }
