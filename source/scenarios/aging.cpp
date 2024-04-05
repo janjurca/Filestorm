@@ -151,7 +151,7 @@ void AgingScenario::run() {
           close(fd);
         });
         auto duration = action.exec();
-        spdlog::debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", int(file_node->path(true), file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
+        spdlog::debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
                                   (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         touched_files.push_back(file_node);
         result.setAction(Result::Action::CREATE_FILE);
