@@ -29,7 +29,7 @@ public:
     long size;
     std::map<std::string, std::unique_ptr<Node>> folders;
     std::map<std::string, std::unique_ptr<Node>> files;
-    int extents_count = 0;
+    std::vector<extents> extents;
 
     Node(const std::string& n, Type t, Node* p, long size = 0) : name(n), type(t), parent(p), size(size) {}
     std::string path(bool include_root = false) const {
@@ -46,12 +46,16 @@ public:
     int getExtentsCount(bool update = true) {
       if (update) {
         if (type == Type::FILE) {
-          extents_count = get_extents(path(true).c_str()).size();
+          extents.clear();
+          // extents_count = get_extents(path(true).c_str()).size();
+          for (auto extent : get_extents(path(true).c_str())) {
+            extents.push_back(extent);
+          }
         } else {
-          extents_count = 0;
+          extents.clear();
         }
       }
-      return extents_count;
+      return extents.size();
     }
   };
 

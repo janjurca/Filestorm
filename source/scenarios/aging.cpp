@@ -38,6 +38,7 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("y", "sync", "Sync after each write", "false"));
   addParameter(Parameter("o", "direct_io", "Use direct IO", "false"));
   addParameter(Parameter("t", "time", "Max Time to run", "20m"));
+  addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
 }
 
 AgingScenario::~AgingScenario() {}
@@ -375,7 +376,11 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pAB"] = caf - probabilities["pAM"];
   probabilities["pAS"] = 1 - probabilities["pAM"] - probabilities["pAB"];
 #if __linux__
-  probabilities["pAST"] = 0.1;
+  if (getParameter("features-punch-hole").get_bool()) {
+    probabilities["pAST"] = 0.1;
+  } else {
+    probabilities["pAST"] = 1;
+  }
   probabilities["pASF"] = 1 - probabilities["pAST"];
 #else
   probabilities["pAST"] = 1;
