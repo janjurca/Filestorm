@@ -206,7 +206,7 @@ void AgingScenario::run() {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
-        double hole_size = d_rand(0.1, 0.3);
+        double hole_size = d_rand(0.05, 0.95);
         size_t hole_start = (actual_file_size - actual_file_size * hole_size) * d_rand(0, 1);
         size_t hole_end = hole_start + actual_file_size * hole_size;
         // Round to modulo blocksize
