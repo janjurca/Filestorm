@@ -152,7 +152,8 @@ void AgingScenario::run() {
           close(fd);
         });
         auto duration = action.exec();
-        spdlog::debug(fmt::format("Wrote {} bytes in {} ms", file_size.get_value(), duration.count() / 1000000.0));
+        spdlog::debug(
+            fmt::format("Wrote {} bytes in {} ms | Speed {} MB/s", file_size.get_value(), duration.count() / 1000000.0, (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         touched_files.push_back(file_node);
         result.setAction(Result::Action::CREATE_FILE);
         result.setOperation(Result::Operation::WRITE);
@@ -278,6 +279,8 @@ void AgingScenario::run() {
           close(fd);
         });
         auto duration = action.exec();
+        spdlog::debug("ALTER_BIGGER {} from {} to {} in {} ms | Speed {} MB/s", random_file_path, actual_file_size, new_file_size.get_value(), duration.count() / 1000000.0,
+                      ((new_file_size.get_value() - actual_file_size) / 1024. / 1024.) / (duration.count() / 1000000000.0));
         touched_files.push_back(random_file);
         result.setAction(Result::Action::ALTER_BIGGER);
         result.setOperation(Result::Operation::WRITE);
@@ -392,7 +395,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pCD"] = 1 - probabilities["pCF"];
   probabilities["p1"] = 1.0;
 
-#if true
+#if false
   std::string logMessage = fmt::format("Capacity: {} MB | available: {} MB | pC: {:.4f}, pD: {:.4f}, pA: {:.4f}, sum p {:.4f} ", fs_status.capacity / 1024 / 1024, fs_status.available / 1024 / 1024,
                                        probabilities["pC"], probabilities["pD"], probabilities["pA"], probabilities["pC"] + probabilities["pD"] + probabilities["pA"]);
   logMessage += fmt::format("Capacity: {} B | available: {} B ", fs_status.capacity, fs_status.available);
