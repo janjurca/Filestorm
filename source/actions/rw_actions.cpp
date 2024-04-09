@@ -54,6 +54,7 @@ void ReadMonitoredAction::work() {
 
     while (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - start_time).count() <= get_time_limit().count()) {
       m_read_bytes += pread(fd, data, block_size, get_offset());
+      now_time = std::chrono::high_resolution_clock::now();
     }
   } else {
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
@@ -77,15 +78,11 @@ void ReadMonitoredAction::prewrite() {
 
   auto data = line.get();
 
-  while (m_written_bytes < get_file_size().convert<DataUnit::B>().get_value()) {
-    generate_random_chunk(line.get(), block_size);
+  generate_random_chunk(line.get(), block_size);
+  while (m_written_bytes < file_size_bytes) {
     m_written_bytes += write(fd, line.get(), block_size);
-    spdlog::debug("{}::prewrite: m_written_bytes: {} | {} | {}", typeid(*this).name(), m_written_bytes, (float(file_size_bytes) / float(m_written_bytes) * 100), m_written_bytes / 1024 / 1024);
-
-    // if (int(float(file_size_bytes) / float(m_written_bytes)) % 5 == 0) {
-    //   spdlog::debug("{}::prewrite: progress: {}%", typeid(*this).name(), int(float(m_written_bytes) / float(file_size_bytes) * 100));
-    // }
   }
+  spdlog::debug("{}::prewrite: written_bytes: {} DONE", typeid(*this).name(), m_written_bytes);
   close(fd);
 }
 
