@@ -168,16 +168,17 @@ void WriteMonitoredAction::work() {
 
     auto data = line.get();
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
-
-    while (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - start_time).count() <= std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count()) {
+    auto time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count();
+    while (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - start_time).count() <= time_limit) {
       m_written_bytes += pwrite(fd, data, block_size, get_offset());
       now_time = std::chrono::high_resolution_clock::now();
     }
   } else {
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
 
-    while (m_written_bytes < get_file_size().convert<DataUnit::B>().get_value()) {
-      generate_random_chunk(line.get(), block_size);
+    generate_random_chunk(line.get(), block_size);
+    auto file_size = get_file_size().convert<DataUnit::B>().get_value();
+    while (m_written_bytes < file_size) {
       m_written_bytes += write(fd, line.get(), block_size);
     }
   }
