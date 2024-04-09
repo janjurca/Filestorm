@@ -14,10 +14,11 @@ inline off_t ReadMonitoredAction::get_offset() {
 
 ReadMonitoredAction::ReadMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes)
     //: VirtualMonitoredAction(monitoring_interval, on_log), FileActionAttributes(file_attributes) {}
-    : RWAction(monitoring_interval, on_log, file_attributes) {}
+    : RWAction(monitoring_interval, on_log, file_attributes) {
+  prewrite();
+}
 
 void ReadMonitoredAction::work() {
-  prewrite();
   spdlog::debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());
   int fd;
   std::unique_ptr<char[]> line(new char[get_block_size().convert<DataUnit::B>().get_value()]);
