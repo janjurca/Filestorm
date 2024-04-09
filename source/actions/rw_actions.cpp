@@ -69,16 +69,22 @@ void ReadMonitoredAction::prewrite() {
   if (fd == -1) {
     throw std::runtime_error(fmt::format("{}::prewrite: error opening file: {}", typeid(*this).name(), strerror(errno)));
   }
-  u_int64_t m_wrote_bytes = 0;
+  u_int64_t m_written_bytes = 0;
   spdlog::debug("{}::prewrite: file_size: {}", typeid(*this).name(), get_file_size());
   u_int64_t file_size_bytes = get_file_size().convert<DataUnit::B>().get_value();
-  while (m_wrote_bytes < file_size_bytes) {
-    // write random data
-    char random_data = rand() % 256;
-    m_wrote_bytes += write(fd, &random_data, 1);
-    if (int(float(file_size_bytes) / float(m_wrote_bytes)) % 5 == 0) {
-      spdlog::debug("{}::prewrite: progress: {}%", typeid(*this).name(), int(float(m_wrote_bytes) / float(file_size_bytes) * 100));
-    }
+  size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+  std::unique_ptr<char[]> line(new char[get_block_size().convert<DataUnit::B>().get_value()]);
+
+  auto data = line.get();
+
+  while (m_written_bytes < get_file_size().convert<DataUnit::B>().get_value()) {
+    generate_random_chunk(line.get(), block_size);
+    m_written_bytes += write(fd, line.get(), block_size);
+    spdlog::debug("{}::prewrite: m_written_bytes: {} | {} | {}", typeid(*this).name(), m_written_bytes, (float(file_size_bytes) / float(m_written_bytes) * 100), m_written_bytes / 1024 / 1024);
+
+    // if (int(float(file_size_bytes) / float(m_written_bytes)) % 5 == 0) {
+    //   spdlog::debug("{}::prewrite: progress: {}%", typeid(*this).name(), int(float(m_written_bytes) / float(file_size_bytes) * 100));
+    // }
   }
   close(fd);
 }
