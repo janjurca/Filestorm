@@ -26,7 +26,7 @@ public:
   DataSize<DataUnit::B> get_block_size() const;
   DataSize<DataUnit::KB> get_file_size() const;
   std::string get_file_path() const;
-  std::chrono::seconds get_time_limit() const;
+  std::chrono::milliseconds get_time_limit() const;
   bool is_time_based() const;
 };
 
