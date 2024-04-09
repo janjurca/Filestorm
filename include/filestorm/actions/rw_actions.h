@@ -41,6 +41,8 @@ protected:
 
   inline off_t get_offset();
 
+  void prewrite();
+
 public:
   ReadMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes);
 

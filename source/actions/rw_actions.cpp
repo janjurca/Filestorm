@@ -17,6 +17,7 @@ ReadMonitoredAction::ReadMonitoredAction(std::chrono::milliseconds monitoring_in
     : RWAction(monitoring_interval, on_log, file_attributes) {}
 
 void ReadMonitoredAction::work() {
+  prewrite();
   spdlog::debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());
   int fd;
   std::unique_ptr<char[]> line(new char[get_block_size().convert<DataUnit::B>().get_value()]);
@@ -58,6 +59,20 @@ void ReadMonitoredAction::work() {
     while (m_read_bytes < get_file_size().convert<DataUnit::B>().get_value()) {
       m_read_bytes += pread(fd, line.get(), block_size, get_offset());
     }
+  }
+  close(fd);
+}
+
+void ReadMonitoredAction::prewrite() {
+  int fd = open(get_file_path().c_str(), O_RDWR | O_CREAT, S_IRWXU);
+  if (fd == -1) {
+    throw std::runtime_error(fmt::format("{}::prewrite: error opening file: {}", typeid(*this).name(), strerror(errno)));
+  }
+  u_int64_t m_wrote_bytes = 0;
+  while (m_wrote_bytes < get_file_size().convert<DataUnit::B>().get_value()) {
+    // write random data
+    char random_data = rand() % 256;
+    m_wrote_bytes += write(fd, &random_data, 1);
   }
   close(fd);
 }
