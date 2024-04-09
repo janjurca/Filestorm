@@ -70,10 +70,15 @@ void ReadMonitoredAction::prewrite() {
     throw std::runtime_error(fmt::format("{}::prewrite: error opening file: {}", typeid(*this).name(), strerror(errno)));
   }
   u_int64_t m_wrote_bytes = 0;
-  while (m_wrote_bytes < get_file_size().convert<DataUnit::B>().get_value()) {
+  spdlog::debug("{}::prewrite: file_size: {}", typeid(*this).name(), get_file_size());
+  u_int64_t file_size_bytes = get_file_size().convert<DataUnit::B>().get_value();
+  while (m_wrote_bytes < file_size_bytes) {
     // write random data
     char random_data = rand() % 256;
     m_wrote_bytes += write(fd, &random_data, 1);
+    if (int(float(file_size_bytes) / float(m_wrote_bytes)) % 5 == 0) {
+      spdlog::debug("{}::prewrite: progress: {}%", typeid(*this).name(), int(float(m_wrote_bytes) / float(file_size_bytes) * 100));
+    }
   }
   close(fd);
 }
