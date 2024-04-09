@@ -44,7 +44,7 @@ void BasicScenario::run() {
       auto speed = diff / duration_diff.count();     // bytes per nanosecond
       auto speed_mb_s = speed * 1000 * 1000 * 1000;  // bytes per second
       auto speed_mb = speed_mb_s / 1024 / 1024;      // megabytes per second
-      spdlog::debug("Action: {} | Value: {} | Duration: {} | Speed: {} MB/s", key, diff, duration_diff.count(), speed_mb);
+      spdlog::debug("Action: {} | Value: {} | Duration: {} | Speed: {} MB/s", key, value, duration_diff.count(), speed_mb);
     }
   };
   if (operation == "read") {
