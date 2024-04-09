@@ -22,7 +22,9 @@ create_file["duration_per_size"] = create_file["duration"] / create_file["size"]
 # original duration is in nanoseconds
 create_file["duration_seconds"] = create_file["duration"] / 1e9
 create_file["speed_mbs"] = create_file["size"] / create_file["duration_seconds"] / 1024 / 1024
-plt.plot(create_file["iteration"], create_file["speed_mbs"], 'ro', markersize=1)
+marker_size = create_file["size"] / 1024/1024/10  # Adjust the division factor as needed
+
+plt.scatter(create_file["iteration"], create_file["speed_mbs"], s=marker_size, c='red', alpha=0.5)
 plt.xlabel('Size')
 plt.ylabel('Speed MB/s')
 plt.title('Create file')

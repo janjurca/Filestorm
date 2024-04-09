@@ -1,3 +1,4 @@
+#pragma once
 #include <errno.h>
 #include <fcntl.h>
 #include <filestorm/actions/actions.h>
@@ -28,7 +29,13 @@
 #include <vector>
 // ABOUT DIRECT IO https://github.com/facebook/rocksdb/wiki/Direct-IO
 
-class ReadMonitoredAction : public VirtualMonitoredAction, public FileActionAttributes {
+class RWAction : public VirtualMonitoredAction, public FileActionAttributes {
+public:
+  RWAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes)
+      : VirtualMonitoredAction(monitoring_interval, on_log), FileActionAttributes(file_attributes) {}
+};
+
+class ReadMonitoredAction : public RWAction {
 protected:
   u_int64_t m_read_bytes = 0;
 
@@ -41,13 +48,17 @@ public:
   void log_values() override;
 };
 class RandomReadMonitoredAction : public ReadMonitoredAction {
+public:
+  RandomReadMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes)
+      : ReadMonitoredAction(monitoring_interval, on_log, file_attributes) {}
+
 private:
   std::vector<off_t> m_offsets;
 
   inline off_t get_offset();
 };
 
-class WriteMonitoredAction : public VirtualMonitoredAction, public FileActionAttributes {
+class WriteMonitoredAction : public RWAction {
 protected:
   u_int64_t m_written_bytes = 0;
 
@@ -63,6 +74,10 @@ public:
 };
 
 class RandomWriteMonitoredAction : public WriteMonitoredAction {
+public:
+  RandomWriteMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes)
+      : WriteMonitoredAction(monitoring_interval, on_log, file_attributes) {}
+
 private:
   std::vector<off_t> m_offsets;
 

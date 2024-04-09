@@ -13,7 +13,8 @@ inline off_t ReadMonitoredAction::get_offset() {
 }
 
 ReadMonitoredAction::ReadMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes)
-    : VirtualMonitoredAction(monitoring_interval, on_log), FileActionAttributes(file_attributes) {}
+    //: VirtualMonitoredAction(monitoring_interval, on_log), FileActionAttributes(file_attributes) {}
+    : RWAction(monitoring_interval, on_log, file_attributes) {}
 
 void ReadMonitoredAction::work() {
   spdlog::debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());
@@ -103,7 +104,8 @@ inline void WriteMonitoredAction::generate_random_chunk(char* chunk, size_t size
 }
 
 WriteMonitoredAction::WriteMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes)
-    : VirtualMonitoredAction(monitoring_interval, on_log), FileActionAttributes(file_attributes) {}
+    //: VirtualMonitoredAction(monitoring_interval, on_log), FileActionAttributes(file_attributes) {}
+    : RWAction(monitoring_interval, on_log, file_attributes) {}
 
 void WriteMonitoredAction::work() {
   spdlog::debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());

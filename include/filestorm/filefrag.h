@@ -1,3 +1,5 @@
+#pragma once
+
 #include <fcntl.h>
 #if defined(__linux__)
 #  include <linux/fiemap.h>

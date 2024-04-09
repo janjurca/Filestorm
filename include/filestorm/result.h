@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filestorm/data_sizes.h>
+#include <filestorm/filefrag.h>
 #include <filestorm/filetree.h>
 
 #include <chrono>
@@ -22,6 +23,7 @@ private:
   DataSize<DataUnit::B> _size;
   std::chrono::nanoseconds _duration;
   int64_t _extents_count;
+  std::vector<extents> _extents;
 
 public:
   Result(int iteration, Action action, Operation operation, std::string path, DataSize<DataUnit::B> size, std::chrono::nanoseconds duration, int64_t extents_count)
@@ -44,6 +46,11 @@ public:
   void setSize(DataSize<DataUnit::B> size) { _size = size; }
   void setDuration(std::chrono::nanoseconds duration) { _duration = duration; }
   void setExtentsCount(int64_t extents_count) { _extents_count = extents_count; }
+  void setExtents(std::vector<extents> extents) {
+    for (auto& extent : extents) {
+      _extents.push_back(extent);
+    }
+  }
 
   void commit() { results.push_back(*this); }
 
