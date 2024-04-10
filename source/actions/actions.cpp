@@ -39,11 +39,9 @@ VirtualMonitoredAction::~VirtualMonitoredAction() {
 }
 
 void VirtualMonitoredAction::exec() {
-  spdlog::debug("VirtualMonitoredAction::exec");
   start_monitor();
   work();
   stop_monitor();
-  spdlog::debug("VirtualMonitoredAction::exec finished");
 }
 
 void VirtualMonitoredAction::work() { throw "Not implemented"; }

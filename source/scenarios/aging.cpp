@@ -148,9 +148,9 @@ void AgingScenario::run() {
           for (uint64_t written_bytes = 0; written_bytes < file_size.get_value(); written_bytes += block_size) {
             write(fd, line.get(), block_size);
           }
-          close(fd);
         });
         auto duration = action.exec();
+        close(fd);
         spdlog::debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
                                   (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         touched_files.push_back(file_node);
@@ -221,10 +221,10 @@ void AgingScenario::run() {
             throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
           }
           fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, hole_start, hole_end - hole_start);
-          close(fd);
         });
         touched_files.push_back(random_file);
         auto duration = action.exec();
+        close(fd);
         result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
         result.setPath(random_file_path);
         result.setSize(DataSize<DataUnit::B>(hole_size));
