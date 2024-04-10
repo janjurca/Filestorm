@@ -1,5 +1,7 @@
 #include <filestorm/actions/rw_actions.h>
 
+#include <thread>
+
 inline off_t ReadMonitoredAction::get_offset() {
   static off_t offset = 0;
   static off_t block_size_bytes = get_block_size().convert<DataUnit::B>().get_value();
@@ -52,9 +54,14 @@ void ReadMonitoredAction::work() {
     auto data = line.get();
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
 
-    while (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - start_time).count() <= get_time_limit().count()) {
+    auto time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count();
+    bool ended = false;
+    std::thread timerThread([&ended, time_limit]() {
+      std::this_thread::sleep_for(std::chrono::milliseconds(time_limit));
+      ended = true;
+    });
+    while (!ended) {
       m_read_bytes += pread(fd, data, block_size, get_offset());
-      now_time = std::chrono::high_resolution_clock::now();
     }
   } else {
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
@@ -169,10 +176,16 @@ void WriteMonitoredAction::work() {
     auto data = line.get();
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
     auto time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count();
-    while (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - start_time).count() <= time_limit) {
+
+    bool ended = false;
+    std::thread timerThread([&ended, time_limit]() {
+      std::this_thread::sleep_for(std::chrono::milliseconds(time_limit));
+      ended = true;
+    });
+    while (!ended) {
       m_written_bytes += pwrite(fd, data, block_size, get_offset());
-      now_time = std::chrono::high_resolution_clock::now();
     }
+    timerThread.join();
   } else {
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
 

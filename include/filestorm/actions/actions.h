@@ -63,7 +63,7 @@ public:
 class VirtualMonitoredAction {
 protected:
   std::chrono::milliseconds m_interval;
-  std::atomic<bool> m_running = false;
+  std::atomic<bool> m_running = false;  // monitoring control variable
   std::thread m_thread;
   std::map<std::string, std::vector<std::tuple<std::chrono::nanoseconds, float>>> m_monitoredData;
   mutable std::mutex m_monitoredDataMutex;
