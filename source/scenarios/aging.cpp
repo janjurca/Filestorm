@@ -221,10 +221,10 @@ void AgingScenario::run() {
             throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
           }
           fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, hole_start, hole_end - hole_start);
+          close(fd);
         });
         touched_files.push_back(random_file);
         auto duration = action.exec();
-        close(fd);
         result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
         result.setPath(random_file_path);
         result.setSize(DataSize<DataUnit::B>(hole_size));
