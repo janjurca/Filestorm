@@ -208,7 +208,7 @@ void AgingScenario::run() {
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
         std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
         // Round to modulo blocksize
-        spdlog::debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, actual_file_size, std::get<0>(hole_adress), std::get<1>(hole_adress));
+        spdlog::debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_adress), std::get<1>(hole_adress));
         MeasuredCBAction action([&]() {
           int fd = open(random_file_path.c_str(), O_RDWR);
           if (fd == -1) {
@@ -222,7 +222,7 @@ void AgingScenario::run() {
         auto duration = action.exec();
         result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
         result.setPath(random_file_path);
-        result.setSize(DataSize<DataUnit::B>(hole_size));
+        result.setSize(DataSize<DataUnit::B>(std::get<1>(hole_adress) - std::get<0>(hole_adress)));
         result.setDuration(duration);
 #else
         throw std::runtime_error("FALLOCATE not supported on this system");
