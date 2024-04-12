@@ -25,14 +25,14 @@ FileTree::Node* FileTree::addDirectory(Node* parent, const std::string& dirName)
   return parent->folders[dirName].get();
 }
 
-FileTree::Node* FileTree::addFile(Node* parent, const std::string& fileName, long size) {
+FileTree::Node* FileTree::addFile(Node* parent, const std::string& fileName) {
   if (parent->type == Type::FILE) {
     throw std::runtime_error("Can't add file to a file node!");
   }
   if (parent->files.find(fileName) != parent->files.end()) {
     throw std::runtime_error("File already registered!");
   }
-  parent->files[fileName] = std::make_unique<Node>(fileName, Type::FILE, parent, size);
+  parent->files[fileName] = std::make_unique<Node>(fileName, Type::FILE, parent);
   all_files.push_back(parent->files[fileName].get());
   file_count++;
   return parent->files[fileName].get();

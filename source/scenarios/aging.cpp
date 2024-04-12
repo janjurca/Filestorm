@@ -205,22 +205,17 @@ void AgingScenario::run() {
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
-        auto actual_file_size = fs_utils::file_size(random_file_path);
-        double hole_size = d_rand(0.05, 0.95);
-        size_t hole_start = (actual_file_size - actual_file_size * hole_size) * d_rand(0, 1);
-        size_t hole_end = hole_start + actual_file_size * hole_size;
-        // Round to modulo blocksize
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
-        hole_start = hole_start - (hole_start % block_size);
-        hole_end = hole_end - (hole_end % block_size);
-        spdlog::debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, actual_file_size, hole_start, hole_end);
+        std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
+        // Round to modulo blocksize
+        spdlog::debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, actual_file_size, std::get<0>(hole_adress), std::get<1>(hole_adress));
         MeasuredCBAction action([&]() {
           int fd = open(random_file_path.c_str(), O_RDWR);
           if (fd == -1) {
             std::cerr << "Error opening file: " << strerror(errno) << std::endl;
             throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
           }
-          fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, hole_start, hole_end - hole_start);
+          fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, std::get<0>(hole_adress), std::get<1>(hole_adress) - std::get<0>(hole_adress));
           close(fd);
         });
         touched_files.push_back(random_file);

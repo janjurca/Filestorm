@@ -2,6 +2,7 @@
 
 #include <filestorm/filefrag.h>
 #include <filestorm/utils.h>
+#include <filestorm/utils/fs.h>
 
 #include <atomic>
 #include <iostream>
@@ -26,12 +27,12 @@ public:
     std::string name;
     Type type;
     Node* parent;
-    long size;
+    int fallocated_count = 0;
     std::map<std::string, std::unique_ptr<Node>> folders;
     std::map<std::string, std::unique_ptr<Node>> files;
     std::vector<extents> _extents;
 
-    Node(const std::string& n, Type t, Node* p, long size = 0) : name(n), type(t), parent(p), size(size) {}
+    Node(const std::string& n, Type t, Node* p) : name(n), type(t), parent(p) {}
     std::string path(bool include_root = false) const {
       if (parent == nullptr) {
         if (include_root) {
@@ -57,6 +58,28 @@ public:
       }
       return _extents.size();
     }
+
+    std::uintmax_t size() { return fs_utils::file_size(path(true)); }
+
+    std::tuple<size_t, size_t> getHoleAdress(size_t blocksize, bool increment) {
+      size_t start = 0, end = size() / 2;
+      for (int i = 0; i < fallocated_count; i++) {
+        size_t length = end - start;
+        start = end;
+        end += length;
+      }
+      start = start - (start % blocksize);
+      end = end - (end % blocksize);
+      if (end - start < 3 * blocksize) {
+        throw std::runtime_error("Not enough space for hole");
+      }
+      start += blocksize;
+      end -= blocksize;
+      if (increment) {
+        fallocated_count++;
+      }
+      return std::make_tuple(start, end);
+    }
   };
 
   std::vector<Node*> all_files;
@@ -71,7 +94,7 @@ public:
   FileTree(const std::string& rootName, unsigned int max_depth = 0);
   Node* addDirectory(Node* parent, const std::string& dirName);
   void remove(Node* node);
-  FileTree::Node* addFile(Node* parent, const std::string& fileName, long size = 0);
+  FileTree::Node* addFile(Node* parent, const std::string& fileName);
 
   Node* mkdir(std::string path, bool recursively = false);
   Node* mkfile(std::string path);
