@@ -319,8 +319,8 @@ void AgingScenario::run() {
           spdlog::debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents);
           tree.total_extents_count += updated_extents - original_extents;
         }
-        spdlog::debug("Total extents count: {}, File Count {}, F avail files {}, free space {}", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
-                      fs_utils::get_fs_status(getParameter("directory").get_string()).available);
+        spdlog::debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
+                      fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
         touched_files.clear();
         result.commit();
         result = Result();
