@@ -80,10 +80,20 @@ public:
       }
       return std::make_tuple(start, end);
     }
+
+    bool isPunchable(size_t blocksize) {
+      try {
+        getHoleAdress(blocksize, false);
+        return true;
+      } catch (const std::exception& e) {
+        return false;
+      }
+    }
   };
 
   std::vector<Node*> all_files;
   std::vector<Node*> all_directories;
+  std::vector<Node*> files_for_fallocate;
 
   int64_t total_extents_count = 0;
 
@@ -114,6 +124,8 @@ public:
 
   Node* randomFile();
   Node* randomDirectory();
+  Node* randomPunchableFile(size_t blocksize, bool commit);
+  bool hasPunchableFiles();
 
   void leafDirWalk(std::function<void(Node*)> f);
   void bottomUpDirWalk(Node* node, std::function<void(Node*)> f);

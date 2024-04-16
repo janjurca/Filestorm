@@ -34,6 +34,7 @@ FileTree::Node* FileTree::addFile(Node* parent, const std::string& fileName) {
   }
   parent->files[fileName] = std::make_unique<Node>(fileName, Type::FILE, parent);
   all_files.push_back(parent->files[fileName].get());
+  files_for_fallocate.push_back(parent->files[fileName].get());
   file_count++;
   return parent->files[fileName].get();
 }
@@ -67,11 +68,14 @@ void FileTree::remove(Node* node) {
     remove(node->files.begin()->second.get());
   }
   if (node->type == Type::DIRECTORY) {
-    all_directories.erase(std::remove(all_directories.begin(), all_directories.end(), node), all_directories.end());
+    // all_directories.erase(std::remove(all_directories.begin(), all_directories.end(), node), all_directories.end());
+    std::remove(all_directories.begin(), all_directories.end(), node);
     node->parent->folders.erase(node->name);
     directory_count--;
   } else {
-    all_files.erase(std::remove(all_files.begin(), all_files.end(), node), all_files.end());
+    // all_files.erase(std::remove(all_files.begin(), all_files.end(), node), all_files.end());
+    std::remove(all_files.begin(), all_files.end(), node);
+    std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), node);
     node->parent->files.erase(node->name);
     file_count--;
   }
@@ -291,3 +295,18 @@ void FileTree::bottomUpDirWalk(Node* node, std::function<void(Node*)> f) {
     // f(node);
   }
 }
+
+FileTree::Node* FileTree::randomPunchableFile(size_t blocksize, bool commit) {
+  if (files_for_fallocate.size() == 0) {
+    throw std::runtime_error("No punchable files in the tree!");
+  }
+
+  auto random_file = files_for_fallocate.begin();
+  std::advance(random_file, rand() % files_for_fallocate.size());
+  if (commit) {
+    files_for_fallocate.erase(random_file);
+  }
+  return *random_file;
+}
+
+bool FileTree::hasPunchableFiles() { return files_for_fallocate.size() > 0; }

@@ -203,7 +203,7 @@ void AgingScenario::run() {
 #  warning "FALLOCATE not supported on macOS"
         throw std::runtime_error("FALLOCATE not supported on this system");
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-        auto random_file = tree.randomFile();
+        auto random_file = tree.randomPunchableFile(get_block_size().convert<DataUnit::B>().get_value(), true);
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
         std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
@@ -373,7 +373,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pAB"] = caf - probabilities["pAM"];
   probabilities["pAS"] = 1 - probabilities["pAM"] - probabilities["pAB"];
 #if __linux__
-  if (getParameter("features-punch-hole").get_bool()) {
+  if (getParameter("features-punch-hole").get_bool() && tree.hasPunchableFiles()) {
     probabilities["pAST"] = 0.1;
   } else {
     probabilities["pAST"] = 1;
