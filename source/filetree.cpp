@@ -303,7 +303,7 @@ FileTree::Node* FileTree::randomPunchableFile(size_t blocksize, bool commit) {
 
   auto random_file = files_for_fallocate.begin();
   std::advance(random_file, rand() % files_for_fallocate.size());
-  if (commit) {
+  if (commit && !(*random_file)->isPunchable(blocksize)) {
     files_for_fallocate.erase(random_file);
   }
   return *random_file;
