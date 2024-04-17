@@ -93,7 +93,7 @@ public:
     void truncate(size_t new_size) {
       // There is the need to adjust the fallocation number according to new truncated size
       size_t old_size = size();
-      int index = 0;
+      int index = 1;
       size_t hole_size = old_size / 2;
       size_t start = 0, end = hole_size;
       while (end < new_size) {
