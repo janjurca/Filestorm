@@ -99,6 +99,8 @@ public:
       while (end < new_size) {
         if (index < 50) {
           spdlog::debug("start: {}, end: {}, hole_size: {}, new_size: {}, index: {}", start, end, hole_size, new_size, index);
+        } else {
+          throw std::runtime_error("Too many iterations");
         }
 
         start = end;
