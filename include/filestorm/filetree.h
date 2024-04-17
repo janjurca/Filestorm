@@ -100,11 +100,11 @@ public:
       while (end < new_size) {
         spdlog::debug("start: {}, end: {}, hole_size: {}", start, end, hole_size);
         start = end;
-        end = start + hole_size;
         hole_size = hole_size / 2;
+        end = start + hole_size;
         index++;
       }
-      fallocated_count = --index;
+      fallocated_count = index;
     }
   };
 
