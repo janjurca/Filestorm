@@ -310,3 +310,13 @@ FileTree::Node* FileTree::randomPunchableFile(size_t blocksize, bool commit) {
 }
 
 bool FileTree::hasPunchableFiles() { return files_for_fallocate.size() > 0; }
+
+void FileTree::checkFallocatability(Node* file, size_t blocksize) {
+  if (!file->isPunchable(blocksize)) {
+    // remove node from files_for_fallocate
+    auto it = std::find(files_for_fallocate.begin(), files_for_fallocate.end(), file);
+    if (it != files_for_fallocate.end()) {
+      files_for_fallocate.erase(it);
+    }
+  }
+}

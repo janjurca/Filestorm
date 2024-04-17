@@ -89,6 +89,22 @@ public:
         return false;
       }
     }
+
+    void truncate(size_t new_size) {
+      // There is the need to adjust the fallocation number according to new truncated size
+      size_t old_size = size();
+
+      int index = 0;
+      size_t hole_size = old_size / 2;
+      size_t start = 0, end = 0;
+      while (end < new_size) {
+        start = end;
+        end = start + hole_size;
+        hole_size = hole_size / 2;
+        index++;
+      }
+      fallocated_count = index;
+    }
   };
 
   std::vector<Node*> all_files;
@@ -126,6 +142,7 @@ public:
   Node* randomDirectory();
   Node* randomPunchableFile(size_t blocksize, bool commit);
   bool hasPunchableFiles();
+  void checkFallocatability(Node* file, size_t blocksize);
 
   void leafDirWalk(std::function<void(Node*)> f);
   void bottomUpDirWalk(Node* node, std::function<void(Node*)> f);
