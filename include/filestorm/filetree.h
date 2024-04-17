@@ -98,7 +98,7 @@ public:
       size_t hole_size = old_size / 2;
       size_t start = 0, end = hole_size;
       while (end < new_size) {
-        spdlog::debug("start: {}, end: {}, hole_size: {}", start, end, hole_size);
+        spdlog::debug("start: {}, end: {}, hole_size: {}, new_size: {}, index: {}", start, end, hole_size, new_size, index);
         start = end;
         hole_size = hole_size / 2;
         end = start + hole_size;
