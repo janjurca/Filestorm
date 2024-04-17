@@ -66,7 +66,7 @@ public:
       for (int i = 0; i < fallocated_count; i++) {
         size_t length = end - start;
         start = end;
-        end += length;
+        end += length / 2;
       }
       start = start - (start % blocksize);
       end = end - (end % blocksize);
