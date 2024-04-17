@@ -98,12 +98,13 @@ public:
       size_t hole_size = old_size / 2;
       size_t start = 0, end = 0;
       while (end < new_size) {
+        spdlog::debug("start: {}, end: {}, hole_size: {}", start, end, hole_size);
         start = end;
         end = start + hole_size;
         hole_size = hole_size / 2;
         index++;
       }
-      fallocated_count = index;
+      fallocated_count = --index;
     }
   };
 
