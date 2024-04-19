@@ -90,12 +90,12 @@ public:
       }
     }
 
-    void truncate(size_t new_size) {
+    void truncate(std::uintmax_t new_size) {
       // There is the need to adjust the fallocation number according to new truncated size
-      size_t old_size = size();
+      std::uintmax_t old_size = size();
       int index = 1;
-      size_t hole_size = old_size / 2;
-      size_t start = 0, end = hole_size;
+      std::uintmax_t hole_size = old_size / 2;
+      std::uintmax_t start = 0, end = hole_size;
       while (end < new_size) {
         if (index < 50) {
           spdlog::debug("start: {}, end: {}, hole_size: {}, new_size: {}, index: {}, old_size: {}", start, end, hole_size, new_size, index, old_size);

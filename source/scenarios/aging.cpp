@@ -185,8 +185,8 @@ void AgingScenario::run() {
         auto actual_file_size = fs_utils::file_size(random_file_path);
         // auto new_file_size = get_file_size(0, actual_file_size, false);
         auto new_file_size = get_file_size(DataSize<DataUnit::B>::fromString(getParameter("minfsize").get_string()).convert<DataUnit::B>().get_value(), actual_file_size);
-        random_file->truncate(new_file_size.get_value());
         spdlog::debug("ALTER_SMALLER {} from {} kB to {} kB", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024);
+        random_file->truncate(new_file_size.get_value());
         MeasuredCBAction action([&]() { truncate(random_file_path.c_str(), new_file_size.convert<DataUnit::B>().get_value()); });
         touched_files.push_back(random_file);
         auto duration = action.exec();
