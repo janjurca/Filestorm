@@ -186,7 +186,7 @@ void AgingScenario::run() {
         // auto new_file_size = get_file_size(0, actual_file_size, false);
         std::uintmax_t blocksize = get_block_size().convert<DataUnit::B>().get_value();
         auto new_file_size = get_file_size(std::max(actual_file_size / 2, 10 * blocksize), actual_file_size);
-        spdlog::debug("ALTER_SMALLER_TRUNCATE {} from {} kB to {} kB", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024);
+        spdlog::debug("ALTER_SMALLER_TRUNCATE {} from {} kB to {} kB ({})", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024, new_file_size.get_value());
         random_file->truncate(new_file_size.get_value());
         MeasuredCBAction action([&]() { truncate(random_file_path.c_str(), new_file_size.convert<DataUnit::B>().get_value()); });
         touched_files.push_back(random_file);
