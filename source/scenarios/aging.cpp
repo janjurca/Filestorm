@@ -111,6 +111,7 @@ void AgingScenario::run() {
         // spdlog::debug("DELETE");
         break;
       case CREATE_FILE: {
+        spdlog::debug("CREATE_FILE");
         FileTree::Node* file_node = tree.mkfile(tree.newFilePath());
         spdlog::debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
@@ -163,6 +164,7 @@ void AgingScenario::run() {
         break;
       }
       case CREATE_DIR: {
+        spdlog::debug("CREATE_DIR");
         auto new_dir_path = tree.newDirectoryPath();
         spdlog::debug("CREATE_DIR {}", new_dir_path);
         FileTree::Node* dir_node = tree.mkdir(new_dir_path);
@@ -241,6 +243,7 @@ void AgingScenario::run() {
         break;
       }
       case ALTER_BIGGER: {
+        spdlog::debug("ALTER_BIGGER");
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
@@ -312,6 +315,7 @@ void AgingScenario::run() {
         break;
       }
       case DELETE_DIR: {
+        spdlod::debug("DELETE_DIR");
         auto random_dir = tree.randomDirectory();
         auto random_dir_path = random_dir->path(true);
         spdlog::debug("DELETE_DIR {}", random_dir_path);
