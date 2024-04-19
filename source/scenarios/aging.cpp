@@ -209,7 +209,15 @@ void AgingScenario::run() {
         auto random_file = tree.randomPunchableFile();
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
-        std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
+        std::tuple<size_t, size_t> hole_adress;
+        try {
+          random_file->getHoleAdress(block_size, true);
+        } catch (std::runtime_error& e) {
+          for (auto& f in tree.files_for_fallocate) {
+            cout << f->path(true) << endl;
+          }
+          exit(1);
+        }
         // Round to modulo blocksize
         spdlog::debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_adress), std::get<1>(hole_adress));
         MeasuredCBAction action([&]() {
