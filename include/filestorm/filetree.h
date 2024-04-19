@@ -151,6 +151,7 @@ public:
   Node* randomPunchableFile(size_t blocksize, bool commit);
   bool hasPunchableFiles();
   void checkFallocatability(Node* file, size_t blocksize);
+  void removeFromPunchableFiles(Node* file);
 
   void leafDirWalk(std::function<void(Node*)> f);
   void bottomUpDirWalk(Node* node, std::function<void(Node*)> f);
