@@ -315,7 +315,7 @@ void AgingScenario::run() {
         break;
       }
       case DELETE_DIR: {
-        spdlod::debug("DELETE_DIR");
+        spdlog::debug("DELETE_DIR");
         auto random_dir = tree.randomDirectory();
         auto random_dir_path = random_dir->path(true);
         spdlog::debug("DELETE_DIR {}", random_dir_path);
