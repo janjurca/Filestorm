@@ -217,6 +217,7 @@ void AgingScenario::run() {
         try {
           random_file->getHoleAdress(block_size, true);
         } catch (std::runtime_error& e) {
+          std::cerr << "Error getting hole address: " << e.what() << std::endl;
           for (auto& f : tree.files_for_fallocate) {
             std::cout << f->path(true) << std::endl;
           }
