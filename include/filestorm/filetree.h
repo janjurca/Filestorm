@@ -100,6 +100,12 @@ public:
       std::uintmax_t hole_size = old_size / 2;
       std::uintmax_t start = 0, end = hole_size;
       while (end < new_size) {
+        if (index < 300) {
+          spdlog::debug("start: {}, end: {}, hole_size: {}, new_size: {}, index: {}, old_size: {}", start, end, hole_size, new_size, index, old_size);
+        } else {
+          throw std::runtime_error("Too many iterations");
+        }
+
         start = end;
         hole_size = hole_size / 2;
         end = start + hole_size;
