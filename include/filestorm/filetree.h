@@ -148,7 +148,7 @@ public:
 
   Node* randomFile();
   Node* randomDirectory();
-  Node* randomPunchableFile(size_t blocksize, bool commit);
+  Node* randomPunchableFile(size_t blocksize);
   bool hasPunchableFiles();
   void checkFallocatability(Node* file, size_t blocksize);
   void removeFromPunchableFiles(Node* file);
