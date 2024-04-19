@@ -39,6 +39,7 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("o", "direct_io", "Use direct IO", "false"));
   addParameter(Parameter("t", "time", "Max Time to run", "20m"));
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
+  addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
 }
 
 AgingScenario::~AgingScenario() {}
@@ -393,17 +394,17 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pCD"] = 1 - probabilities["pCF"];
   probabilities["p1"] = 1.0;
 
-#if false
-  std::string logMessage = fmt::format("Capacity: {} MB | available: {} MB | pC: {:.4f}, pD: {:.4f}, pA: {:.4f}, sum p {:.4f} ", fs_status.capacity / 1024 / 1024, fs_status.available / 1024 / 1024,
-                                       probabilities["pC"], probabilities["pD"], probabilities["pA"], probabilities["pC"] + probabilities["pD"] + probabilities["pA"]);
-  logMessage += fmt::format("Capacity: {} B | available: {} B ", fs_status.capacity, fs_status.available);
-  logMessage += fmt::format("pAM: {:.2f}, pAB: {:.2f}, pAS: {:.2f}, sum pA {:.2f} ", probabilities["pAM"], probabilities["pAB"], probabilities["pAS"],
-                            probabilities["pAM"] + probabilities["pAB"] + probabilities["pAS"]);
-  logMessage += fmt::format("pAST: {:.2f}, pASF: {:.2f}, sum pAS {:.2f} ", probabilities["pAST"], probabilities["pASF"], probabilities["pAST"] + probabilities["pASF"]);
-  logMessage += fmt::format("pDD: {:.2f}, pDF: {:.2f}, sum pD {:.2f} ", probabilities["pDD"], probabilities["pDF"], probabilities["pDD"] + probabilities["pDF"]);
-  logMessage += fmt::format("pCF: {:.2f}, pCD: {:.2f}, sum pC {:.2f} ", probabilities["pCF"], probabilities["pCD"], probabilities["pCF"] + probabilities["pCD"]);
-  spdlog::debug(logMessage);
-#endif
+  if (getParameter("features-log-probs").get_bool()) {
+    std::string logMessage = fmt::format("Capacity: {} MB | available: {} MB | pC: {:.4f}, pD: {:.4f}, pA: {:.4f}, sum p {:.4f} ", fs_status.capacity / 1024 / 1024, fs_status.available / 1024 / 1024,
+                                         probabilities["pC"], probabilities["pD"], probabilities["pA"], probabilities["pC"] + probabilities["pD"] + probabilities["pA"]);
+    logMessage += fmt::format("Capacity: {} B | available: {} B ", fs_status.capacity, fs_status.available);
+    logMessage += fmt::format("pAM: {:.2f}, pAB: {:.2f}, pAS: {:.2f}, sum pA {:.2f} ", probabilities["pAM"], probabilities["pAB"], probabilities["pAS"],
+                              probabilities["pAM"] + probabilities["pAB"] + probabilities["pAS"]);
+    logMessage += fmt::format("pAST: {:.2f}, pASF: {:.2f}, sum pAS {:.2f} ", probabilities["pAST"], probabilities["pASF"], probabilities["pAST"] + probabilities["pASF"]);
+    logMessage += fmt::format("pDD: {:.2f}, pDF: {:.2f}, sum pD {:.2f} ", probabilities["pDD"], probabilities["pDF"], probabilities["pDD"] + probabilities["pDF"]);
+    logMessage += fmt::format("pCF: {:.2f}, pCD: {:.2f}, sum pC {:.2f} ", probabilities["pCF"], probabilities["pCD"], probabilities["pCF"] + probabilities["pCD"]);
+    spdlog::debug(logMessage);
+  }
 }
 
 DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t range_to, bool safe) {
