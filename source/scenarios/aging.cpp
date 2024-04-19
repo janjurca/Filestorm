@@ -224,6 +224,7 @@ void AgingScenario::run() {
         touched_files.push_back(random_file);
         auto duration = action.exec();
         if (!random_file->isPunchable(block_size)) {
+          spdlog::warn("File {} is not punchable anymore", random_file_path);
           tree.removeFromPunchableFiles(random_file);
         }
         result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
