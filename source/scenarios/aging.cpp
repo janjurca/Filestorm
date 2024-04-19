@@ -188,10 +188,14 @@ void AgingScenario::run() {
         std::uintmax_t blocksize = get_block_size().convert<DataUnit::B>().get_value();
         auto new_file_size = get_file_size(std::max(actual_file_size / 2, 10 * blocksize), actual_file_size, false);
         spdlog::debug("ALTER_SMALLER_TRUNCATE {} from {} kB to {} kB ({})", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024, new_file_size.get_value());
+        bool fallocatable = random_file->isPunchable(blocksize);
         random_file->truncate(new_file_size.get_value());
         MeasuredCBAction action([&]() { truncate(random_file_path.c_str(), new_file_size.convert<DataUnit::B>().get_value()); });
         touched_files.push_back(random_file);
         auto duration = action.exec();
+        if (fallocatable && !random_file->isPunchable(blocksize)) {
+          tree.removeFromPunchableFiles(random_file);
+        }
         result.setAction(Result::Action::ALTER_SMALLER_TRUNCATE);
         result.setPath(random_file_path);
         result.setSize(new_file_size);
