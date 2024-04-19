@@ -71,7 +71,7 @@ public:
       start = start - (start % blocksize);
       end = end - (end % blocksize);
       if (end - start < 3 * blocksize) {
-        throw std::runtime_error("Not enough space for hole");
+        throw std::runtime_error(fmt::format("Not enough space for hole in file: {}, fallocated count {}", path(true), fallocated_count));
       }
       start += blocksize;
       end -= blocksize;
