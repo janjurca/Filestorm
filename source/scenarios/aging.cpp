@@ -223,7 +223,9 @@ void AgingScenario::run() {
         });
         touched_files.push_back(random_file);
         auto duration = action.exec();
-        tree.removeFromPunchableFiles(random_file);
+        if (!random_file->isPunchable(block_size)) {
+          tree.removeFromPunchableFiles(random_file);
+        }
         result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
         result.setPath(random_file_path);
         result.setSize(DataSize<DataUnit::B>(std::get<1>(hole_adress) - std::get<0>(hole_adress)));
