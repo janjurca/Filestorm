@@ -318,7 +318,5 @@ void FileTree::checkFallocatability(Node* file, size_t blocksize) {
 
 void FileTree::removeFromPunchableFiles(Node* file) {
   auto it = std::find(files_for_fallocate.begin(), files_for_fallocate.end(), file);
-  if (it != files_for_fallocate.end()) {
-    files_for_fallocate.erase(it);
-  }
+  files_for_fallocate.erase(it);
 }
