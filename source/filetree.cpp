@@ -296,27 +296,18 @@ void FileTree::bottomUpDirWalk(Node* node, std::function<void(Node*)> f) {
   }
 }
 
-FileTree::Node* FileTree::randomPunchableFile(size_t blocksize) {
+FileTree::Node* FileTree::randomPunchableFile() {
   if (files_for_fallocate.size() == 0) {
     throw std::runtime_error("No punchable files in the tree!");
   }
   auto random_file = files_for_fallocate.begin();
+  // std::advance(random_file, rand() % files_for_fallocate.size());
   return *random_file;
 }
 
 bool FileTree::hasPunchableFiles() { return files_for_fallocate.size() > 0; }
 
-void FileTree::checkFallocatability(Node* file, size_t blocksize) {
-  if (!file->isPunchable(blocksize)) {
-    // remove node from files_for_fallocate
-    auto it = std::find(files_for_fallocate.begin(), files_for_fallocate.end(), file);
-    if (it != files_for_fallocate.end()) {
-      files_for_fallocate.erase(it);
-    }
-  }
-}
-
 void FileTree::removeFromPunchableFiles(Node* file) {
-  auto it = std::find(files_for_fallocate.begin(), files_for_fallocate.end(), file);
-  files_for_fallocate.erase(it);
+  // files_for_fallocate.erase(std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), file), files_for_fallocate.end());
+  std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), file);
 }

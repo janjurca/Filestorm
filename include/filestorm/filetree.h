@@ -148,9 +148,8 @@ public:
 
   Node* randomFile();
   Node* randomDirectory();
-  Node* randomPunchableFile(size_t blocksize);
+  Node* randomPunchableFile();
   bool hasPunchableFiles();
-  void checkFallocatability(Node* file, size_t blocksize);
   void removeFromPunchableFiles(Node* file);
 
   void leafDirWalk(std::function<void(Node*)> f);

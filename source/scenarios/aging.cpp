@@ -206,7 +206,7 @@ void AgingScenario::run() {
 #  warning "FALLOCATE not supported on macOS"
         throw std::runtime_error("FALLOCATE not supported on this system");
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-        auto random_file = tree.randomPunchableFile(get_block_size().convert<DataUnit::B>().get_value());
+        auto random_file = tree.randomPunchableFile();
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
         std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
