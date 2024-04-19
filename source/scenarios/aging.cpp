@@ -99,7 +99,7 @@ void AgingScenario::run() {
     psm.performTransition(probabilities);
     switch (psm.getCurrentState()) {
       case S:
-        // spdlog::debug("S");
+        spdlog::debug("S");
         break;
       case CREATE:
         // spdlog::debug("CREATE");
@@ -213,16 +213,7 @@ void AgingScenario::run() {
         auto random_file = tree.randomPunchableFile();
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
-        std::tuple<size_t, size_t> hole_adress;
-        try {
-          random_file->getHoleAdress(block_size, true);
-        } catch (std::runtime_error& e) {
-          std::cerr << "Error getting hole address: " << e.what() << std::endl;
-          for (auto& f : tree.files_for_fallocate) {
-            std::cout << f->path(true) << std::endl;
-          }
-          exit(1);
-        }
+        std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
         // Round to modulo blocksize
         spdlog::debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_adress), std::get<1>(hole_adress));
         MeasuredCBAction action([&]() {
@@ -342,7 +333,9 @@ void AgingScenario::run() {
         spdlog::debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
                       fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
         touched_files.clear();
+        spdlog::debug("Result commiting");
         result.commit();
+        spdlog::debug("Result committed");
         result = Result();
 
         iteration++;
