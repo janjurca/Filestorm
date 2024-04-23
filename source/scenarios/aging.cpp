@@ -245,11 +245,17 @@ void AgingScenario::run() {
       case ALTER_BIGGER: {
         spdlog::debug("ALTER_BIGGER");
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
+        spdlog::debug("1 ALTER_BIGGER");
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+        spdlog::debug("2 ALTER_BIGGER");
         generate_random_chunk(line.get(), block_size);
+        spdlog::debug("3 ALTER_BIGGER");
         auto random_file = tree.randomFile();
+        spdlog::debug("4 ALTER_BIGGER");
         auto random_file_path = random_file->path(true);
+        spdlog::debug("5 ALTER_BIGGER");
         auto actual_file_size = fs_utils::file_size(random_file_path);
+        spdlog::debug("6 ALTER_BIGGER");
         auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value());
         spdlog::debug("ALTER_BIGGER {} from {} to {}", random_file_path, actual_file_size, new_file_size);
         int fd;
