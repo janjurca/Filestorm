@@ -41,6 +41,7 @@ public:
           return "";
         }
       }
+      spdlog::debug("name: {}", name);
       return parent->path(include_root) + "/" + name;
     }
 
