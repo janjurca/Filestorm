@@ -156,6 +156,7 @@ void AgingScenario::run() {
         spdlog::debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
                                   (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         touched_files.push_back(file_node);
+
         result.setAction(Result::Action::CREATE_FILE);
         result.setOperation(Result::Operation::WRITE);
         result.setPath(file_node->path(true));
@@ -339,6 +340,9 @@ void AgingScenario::run() {
           auto updated_extents = file->getExtentsCount(true);
           spdlog::debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents);
           tree.total_extents_count += updated_extents - original_extents;
+          if (!file->isPunchable(get_block_size().convert<DataUnit::B>().get_value())) {
+            tree.removeFromPunchableFiles(file);
+          }
         }
         spdlog::debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
                       fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
