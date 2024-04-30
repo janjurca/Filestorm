@@ -43,9 +43,9 @@ public:
         }
       }
       spdlog::debug(">>>>>>>>>>>>>>>>>>>>>>><name: {}", name);
-      std::string path = parent->path(include_root);
-      spdlog::debug("<<<<<<<<<<<<<<<<<<<<<<<<<path: {}", path);
-      return path;
+      std::string p = parent->path(include_root);
+      spdlog::debug("<<<<<<<<<<<<<<<<<<<<<<<<<path: {}", p);
+      return p;
     }
 
     int getExtentsCount(bool update = true) {
