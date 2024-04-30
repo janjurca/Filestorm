@@ -12,7 +12,7 @@ std::atomic<int> FileTree::file_id(0);
 
 FileTree::FileTree(const std::string& rootName, unsigned int max_depth) : _max_depth(max_depth) { root = std::make_unique<Node>(rootName, Type::DIRECTORY, nullptr); }
 
-FileTree::Node* FileTree::addDirectory(Node* parent, const std::string& dirName) {
+FileTree::Nodeptr FileTree::addDirectory(Nodeptr parent, const std::string& dirName) {
   if (parent->type == Type::FILE) {
     throw std::runtime_error("Can't add directory to a file node!");
   }
@@ -20,28 +20,28 @@ FileTree::Node* FileTree::addDirectory(Node* parent, const std::string& dirName)
     throw std::runtime_error("Directory already exists!");
   }
   parent->folders[dirName] = std::make_unique<Node>(dirName, Type::DIRECTORY, parent);
-  all_directories.push_back(parent->folders[dirName].get());
+  all_directories.push_back(parent->folders[dirName]);
   directory_count++;
-  return parent->folders[dirName].get();
+  return parent->folders[dirName];
 }
 
-FileTree::Node* FileTree::addFile(Node* parent, const std::string& fileName) {
+FileTree::Nodeptr FileTree::addFile(Nodeptr parent, const std::string& fileName) {
   if (parent->type == Type::FILE) {
     throw std::runtime_error("Can't add file to a file node!");
   }
   if (parent->files.find(fileName) != parent->files.end()) {
     throw std::runtime_error("File already registered!");
   }
-  parent->files[fileName] = std::make_unique<Node>(fileName, Type::FILE, parent);
-  all_files.push_back(parent->files[fileName].get());
-  files_for_fallocate.push_back(parent->files[fileName].get());
+  parent->files[fileName] = std::make_shared<Node>(fileName, Type::FILE, parent);
+  all_files.push_back(parent->files[fileName]);
+  files_for_fallocate.push_back(parent->files[fileName]);
   file_count++;
-  return parent->files[fileName].get();
+  return parent->files[fileName];
 }
 
-void FileTree::print() const { printRec(root.get(), 0); }
+void FileTree::print() const { printRec(root, 0); }
 
-void FileTree::printRec(const Node* node, int depth) const {
+void FileTree::printRec(const Nodeptr node, int depth) const {
   for (int i = 0; i < depth; ++i) std::cout << "--";
   std::cout << node->name;
   if (node->type == Type::DIRECTORY) {
@@ -50,7 +50,7 @@ void FileTree::printRec(const Node* node, int depth) const {
   std::cout << std::endl;
 
   for (const auto& child : node->folders) {
-    printRec(child.second.get(), depth + 1);
+    printRec(child.second, depth + 1);
   }
   for (const auto& child : node->files) {
     for (int i = 0; i < depth + 1; ++i) std::cout << "--";
@@ -58,14 +58,14 @@ void FileTree::printRec(const Node* node, int depth) const {
   }
 }
 
-void FileTree::remove(Node* node) {
+void FileTree::remove(Nodeptr node) {
   if (node->parent == nullptr) {
     throw std::runtime_error("Can't remove root node!");
   }
   // recursively remove all children and optionaly parent
   while (node->folders.size() > 0 and node->files.size() > 0) {
-    remove(node->folders.begin()->second.get());
-    remove(node->files.begin()->second.get());
+    remove(node->folders.begin()->second);
+    remove(node->files.begin()->second);
   }
   if (node->type == Type::DIRECTORY) {
     // all_directories.erase(std::remove(all_directories.begin(), all_directories.end(), node), all_directories.end());
@@ -81,16 +81,16 @@ void FileTree::remove(Node* node) {
   }
 }
 
-FileTree::Node* FileTree::getRoot() const { return root.get(); }
+FileTree::Nodeptr FileTree::getRoot() const { return root; }
 
-FileTree::Node* FileTree::mkdir(std::string path, bool recursively) {
+FileTree::Nodeptr FileTree::mkdir(std::string path, bool recursively) {
   // split path by /
   path = strip(path, '/');
   auto pathParts = split(path, '/');
   if (pathParts.size() == 0) {
     throw std::runtime_error("Path is empty!");
   }
-  Node* current = root.get();
+  Nodeptr current = root;
   for (auto& part : pathParts) {
     if (part == "") {
       throw std::runtime_error("Path contains empty part!");
@@ -105,20 +105,20 @@ FileTree::Node* FileTree::mkdir(std::string path, bool recursively) {
       if (part == pathParts.back()) {
         throw std::runtime_error("Directory already registered!");
       }
-      current = current->folders[part].get();
+      current = current->folders[part];
     }
   }
   return current;
 }
 
-FileTree::Node* FileTree::mkfile(std::string path) {
+FileTree::Nodeptr FileTree::mkfile(std::string path) {
   // split path by /
   path = strip(path, '/');
   auto pathParts = split(path, '/');
   if (pathParts.size() == 0) {
     throw std::runtime_error("Path is empty!");
   }
-  Node* current = root.get();
+  Nodeptr current = root;
   for (auto& part : pathParts) {
     if (part == "") {
       throw std::runtime_error("Path contains empty part!");
@@ -131,36 +131,36 @@ FileTree::Node* FileTree::mkfile(std::string path) {
         throw std::runtime_error("Directory isn't registered!");
       }
     } else {
-      current = current->folders[part].get();
+      current = current->folders[part];
     }
   }
   throw std::runtime_error("mkfile error: File probably already registered!");
 }
 
-FileTree::Node* FileTree::getNode(std::string path) {
+FileTree::Nodeptr FileTree::getNode(std::string path) {
   // split path by /
   if (path == "/") {
-    return root.get();
+    return root;
   }
   path = strip(path, '/');
   auto pathParts = split(path, '/');
   if (pathParts.size() == 0) {
     throw std::runtime_error("Path is empty!");
   }
-  Node* current = root.get();
+  Nodeptr current = root;
   for (auto& part : pathParts) {
     if (part == "") {
       throw std::runtime_error("Path contains empty part!");
     }
     if (current->files.find(part) != current->files.end()) {
       if (part == pathParts.back()) {
-        return current->files[part].get();
+        return current->files[part];
       } else {
         throw std::runtime_error("Node doesn't exist! (File)");
       }
     }
     if (current->folders.find(part) != current->folders.end()) {
-      current = current->folders[part].get();
+      current = current->folders[part];
     } else {
       throw std::runtime_error("Node doesn't exist! (Folder)");
     }
@@ -175,7 +175,7 @@ void FileTree::rm(std::string path, bool recursively) {
   if (pathParts.size() == 0) {
     throw std::runtime_error("Path is empty!");
   }
-  Node* current = nullptr;
+  Nodeptr current = nullptr;
   if (recursively) {
     try {
       current = getNode(path);
@@ -244,7 +244,7 @@ std::string FileTree::newFilePath() {
   return fmt::format("{}/{}", current_root->path(), new_file_name);
 }
 
-FileTree::Node* FileTree::randomFile() {
+FileTree::Nodeptr FileTree::randomFile() {
   if (all_files.size() == 0) {
     throw std::runtime_error("No files in the tree!");
   }
@@ -254,7 +254,7 @@ FileTree::Node* FileTree::randomFile() {
   return *random_file;
 }
 
-FileTree::Node* FileTree::randomDirectory() {
+FileTree::Nodeptr FileTree::randomDirectory() {
   if (all_directories.size() == 0) {
     throw std::runtime_error("No directories in the tree!");
   }
@@ -263,9 +263,10 @@ FileTree::Node* FileTree::randomDirectory() {
   return *random_dir;
 }
 
-void FileTree::leafDirWalk(std::function<void(Node*)> f) {
-  std::queue<Node*> q;
-  q.push(root.get());
+void FileTree::leafDirWalk(std::function<void(Nodeptr)> f) {
+  std::queue<Nodeptr> q;
+  q.push(root);
+
   while (!q.empty()) {
     auto current = q.front();
     q.pop();
@@ -273,41 +274,41 @@ void FileTree::leafDirWalk(std::function<void(Node*)> f) {
       f(current);
     } else {
       for (const auto& child : current->folders) {
-        q.push(child.second.get());
+        q.push(child.second);
       }
     }
   }
 }
 
-void FileTree::bottomUpDirWalk(Node* node, std::function<void(Node*)> f) {
+void FileTree::bottomUpDirWalk(Nodeptr node, std::function<void(Nodeptr)> f) {
   if (node->folders.size() == 0) {
-    if (node != root.get()) {
+    if (node.get() != root.get()) {
       f(node);
     }
     // f(node);
   } else {
     for (const auto& child : node->folders) {
-      bottomUpDirWalk(child.second.get(), f);
+      bottomUpDirWalk(child.second, f);
     }
-    if (node != root.get()) {
+    if (node.get() != root.get()) {
       f(node);
     }
     // f(node);
   }
 }
 
-FileTree::Node* FileTree::randomPunchableFile() {
+FileTree::Nodeptr FileTree::randomPunchableFile() {
   if (files_for_fallocate.size() == 0) {
     throw std::runtime_error("No punchable files in the tree!");
   }
   auto random_file = files_for_fallocate.begin();
-  // std::advance(random_file, rand() % files_for_fallocate.size());
+  std::advance(random_file, rand() % files_for_fallocate.size());
   return *random_file;
 }
 
 bool FileTree::hasPunchableFiles() { return files_for_fallocate.size() > 0; }
 
-void FileTree::removeFromPunchableFiles(Node* file) {
+void FileTree::removeFromPunchableFiles(Nodeptr file) {
   // files_for_fallocate.erase(std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), file), files_for_fallocate.end());
   std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), file);
 }

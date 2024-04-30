@@ -90,7 +90,7 @@ void AgingScenario::run() {
   ProbabilisticStateMachine psm(transtions, S);
   std::map<std::string, double> probabilities;
 
-  std::vector<FileTree::Node*> touched_files;
+  std::vector<FileTree::Nodeptr> touched_files;
   Result result;
   while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
          && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
@@ -112,7 +112,7 @@ void AgingScenario::run() {
         break;
       case CREATE_FILE: {
         spdlog::debug("CREATE_FILE");
-        FileTree::Node* file_node = tree.mkfile(tree.newFilePath());
+        FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
         spdlog::debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
 
@@ -168,7 +168,7 @@ void AgingScenario::run() {
         spdlog::debug("CREATE_DIR");
         auto new_dir_path = tree.newDirectoryPath();
         spdlog::debug("CREATE_DIR {}", new_dir_path);
-        FileTree::Node* dir_node = tree.mkdir(new_dir_path);
+        FileTree::Nodeptr dir_node = tree.mkdir(new_dir_path);
         auto dir_path = dir_node->path(true);
 
         MeasuredCBAction action([&]() { std::filesystem::create_directory(dir_path); });
@@ -376,7 +376,7 @@ void AgingScenario::run() {
   for (auto& file : tree.all_files) {
     std::filesystem::remove(file->path(true));
   }
-  tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Node* dir) { std::filesystem::remove(dir->path(true)); });
+  tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Nodeptr dir) { std::filesystem::remove(dir->path(true)); });
 }
 
 void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree) {
