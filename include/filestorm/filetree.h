@@ -36,13 +36,16 @@ public:
     std::string path(bool include_root = false) const {
       if (parent == nullptr) {
         if (include_root) {
+          spdlog::debug(">>>>>>>>>>>>>>>>>>>>>>> Returnning: {}", name);
           return name;
         } else {
           return "";
         }
       }
-      spdlog::debug("name: {}", name);
-      return parent->path(include_root) + "/" + name;
+      spdlog::debug(">>>>>>>>>>>>>>>>>>>>>>><name: {}", name);
+      std::string path = parent->path(include_root);
+      spdlog::debug("<<<<<<<<<<<<<<<<<<<<<<<<<path: {}", path);
+      return path;
     }
 
     int getExtentsCount(bool update = true) {
