@@ -48,7 +48,7 @@ public:
       return parent->path(include_root) + "/" + name;
     }
 
-    ~Node() { spdlog::debug("Node {} deleted", this); }
+    ~Node() { spdlog::debug("Node {} deleted", fmt::ptr(this)); }
 
     int getExtentsCount(bool update = true) {
       if (update) {
