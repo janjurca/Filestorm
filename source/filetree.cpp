@@ -301,7 +301,7 @@ FileTree::Nodeptr FileTree::randomPunchableFile() {
   if (files_for_fallocate.empty()) {
     throw std::runtime_error("No punchable files in the tree!");
   }
-  Nodeptr* random_file = files_for_fallocate.begin();
+  auto random_file = files_for_fallocate.begin();
   std::advance(random_file, rand() % files_for_fallocate.size());
   return *random_file;
 }
