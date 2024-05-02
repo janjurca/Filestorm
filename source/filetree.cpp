@@ -62,20 +62,18 @@ void FileTree::remove(Nodeptr node) {
   if (node->parent == nullptr) {
     throw std::runtime_error("Can't remove root node!");
   }
-  // recursively remove all children and optionaly parent
-  while (node->folders.size() > 0 and node->files.size() > 0) {
-    remove(node->folders.begin()->second);
-    remove(node->files.begin()->second);
+  // recursively remove all children and optionally parent
+  while (!node->folders.empty() || !node->files.empty()) {
+    if (!node->folders.empty()) remove(node->folders.begin()->second);
+    if (!node->files.empty()) remove(node->files.begin()->second);
   }
   if (node->type == Type::DIRECTORY) {
-    // all_directories.erase(std::remove(all_directories.begin(), all_directories.end(), node), all_directories.end());
-    std::remove(all_directories.begin(), all_directories.end(), node);
+    all_directories.erase(std::remove(all_directories.begin(), all_directories.end(), node), all_directories.end());
     node->parent->folders.erase(node->name);
     directory_count--;
   } else {
-    // all_files.erase(std::remove(all_files.begin(), all_files.end(), node), all_files.end());
-    std::remove(all_files.begin(), all_files.end(), node);
-    std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), node);
+    all_files.erase(std::remove(all_files.begin(), all_files.end(), node), all_files.end());
+    files_for_fallocate.erase(std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), node), files_for_fallocate.end());
     node->parent->files.erase(node->name);
     file_count--;
   }
