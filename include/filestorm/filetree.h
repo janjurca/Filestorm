@@ -164,15 +164,3 @@ public:
 private:
   void printRec(const Nodeptr node, int depth) const;
 };
-
-/* File tree example:
-FileTree tree("root");
-
-  auto dir1 = tree.addDirectory(tree.root.get(), "dir1");
-  tree.addFile(dir1, "file1.txt");
-  auto subdir = tree.addDirectory(dir1, "subdir");
-  tree.addFile(subdir, "file2.txt");
-  tree.addDirectory(tree.root.get(), "dir2");
-
-  tree.print();
-*/

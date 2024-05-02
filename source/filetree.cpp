@@ -206,7 +206,7 @@ std::string FileTree::newDirectoryPath() {
   unsigned int depth = 0;
   unsigned int rand_selected_depth = rand() % _max_depth;
 
-  auto current_root = root.get();
+  Nodeptr current_root = root;
 
   while (depth < rand_selected_depth) {
     auto current_dir_count = current_root->folders.size();
@@ -216,7 +216,7 @@ std::string FileTree::newDirectoryPath() {
     auto selected_dir_index = rand() % current_dir_count;
     auto selected_dir = current_root->folders.begin();
     std::advance(selected_dir, selected_dir_index);
-    current_root = selected_dir->second.get();
+    current_root = selected_dir->second;
     depth++;
   }
 
@@ -228,7 +228,7 @@ std::string FileTree::newFilePath() {
   unsigned int depth = 0;
   unsigned int rand_selected_depth = rand() % _max_depth;
 
-  auto current_root = root.get();
+  Nodeptr current_root = root;
 
   while (depth < rand_selected_depth) {
     auto current_dir_count = current_root->folders.size();
@@ -238,7 +238,7 @@ std::string FileTree::newFilePath() {
     auto selected_dir_index = rand() % current_dir_count;
     auto selected_dir = current_root->folders.begin();
     std::advance(selected_dir, selected_dir_index);
-    current_root = selected_dir->second.get();
+    current_root = selected_dir->second;
     depth++;
   }
 
@@ -283,18 +283,16 @@ void FileTree::leafDirWalk(std::function<void(Nodeptr)> f) {
 
 void FileTree::bottomUpDirWalk(Nodeptr node, std::function<void(Nodeptr)> f) {
   if (node->folders.size() == 0) {
-    if (node.get() != root.get()) {
+    if (node != root) {
       f(node);
     }
-    // f(node);
   } else {
     for (const auto& child : node->folders) {
       bottomUpDirWalk(child.second, f);
     }
-    if (node.get() != root.get()) {
+    if (node != root) {
       f(node);
     }
-    // f(node);
   }
 }
 
