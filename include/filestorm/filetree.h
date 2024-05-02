@@ -161,6 +161,16 @@ public:
   void leafDirWalk(std::function<void(Nodeptr)> f);
   void bottomUpDirWalk(Nodeptr node, std::function<void(Nodeptr)> f);
 
+  bool findNullPointer() {
+    // find null pointer in files_for fallocate
+    for (auto& file : files_for_fallocate) {
+      if (file == nullptr) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 private:
   void printRec(const Nodeptr node, int depth) const;
 };

@@ -297,10 +297,11 @@ void FileTree::bottomUpDirWalk(Nodeptr node, std::function<void(Nodeptr)> f) {
 }
 
 FileTree::Nodeptr FileTree::randomPunchableFile() {
-  if (files_for_fallocate.size() == 0) {
+  // return random item from punchable files list
+  if (files_for_fallocate.empty()) {
     throw std::runtime_error("No punchable files in the tree!");
   }
-  auto random_file = files_for_fallocate.begin();
+  Nodeptr* random_file = files_for_fallocate.begin();
   std::advance(random_file, rand() % files_for_fallocate.size());
   return *random_file;
 }

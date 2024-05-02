@@ -344,6 +344,9 @@ void AgingScenario::run() {
         touched_files.clear();
         result.commit();
         result = Result();
+        if (tree.findNullPointer()) {
+          throw std::runtime_error("Null pointer found");
+        }
         iteration++;
         break;
       default:
