@@ -23,6 +23,7 @@ public:
   unsigned int _max_depth;
 
   class Node;
+  // using Nodeptr = std::shared_ptr<Node>;
   using Nodeptr = std::shared_ptr<Node>;
 
   class Node {
@@ -46,6 +47,8 @@ public:
       }
       return parent->path(include_root) + "/" + name;
     }
+
+    ~Node() { spdlog::debug("Node {} deleted", this); }
 
     int getExtentsCount(bool update = true) {
       if (update) {
