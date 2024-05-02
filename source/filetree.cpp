@@ -72,8 +72,11 @@ void FileTree::remove(Nodeptr node) {
     node->parent->folders.erase(node->name);
     directory_count--;
   } else {
+    spdlog::debug("Removing file: {} | {}", node->path(), node.use_count());
     all_files.erase(std::remove(all_files.begin(), all_files.end(), node), all_files.end());
+    spdlog::debug("Removing file: {} | {}", node->path(), node.use_count());
     files_for_fallocate.erase(std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), node), files_for_fallocate.end());
+    spdlog::debug("Removing file: {} | {}", node->path(), node.use_count());
     node->parent->files.erase(node->name);
     file_count--;
   }
