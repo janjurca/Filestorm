@@ -301,6 +301,7 @@ FileTree::Nodeptr FileTree::randomPunchableFile() {
   if (files_for_fallocate.empty()) {
     throw std::runtime_error("No punchable files in the tree!");
   }
+  return files_for_fallocate.at(0);
   auto random_file = files_for_fallocate.begin();
   std::advance(random_file, rand() % files_for_fallocate.size());
   return *random_file;
@@ -308,7 +309,4 @@ FileTree::Nodeptr FileTree::randomPunchableFile() {
 
 bool FileTree::hasPunchableFiles() { return files_for_fallocate.size() > 0; }
 
-void FileTree::removeFromPunchableFiles(Nodeptr file) {
-  // files_for_fallocate.erase(std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), file), files_for_fallocate.end());
-  std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), file);
-}
+void FileTree::removeFromPunchableFiles(Nodeptr file) { files_for_fallocate.erase(std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), file), files_for_fallocate.end()); }
