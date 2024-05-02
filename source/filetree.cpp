@@ -10,7 +10,7 @@ std::atomic<int> FileTree::file_count(0);
 std::atomic<int> FileTree::directory_id(0);
 std::atomic<int> FileTree::file_id(0);
 
-FileTree::FileTree(const std::string& rootName, unsigned int max_depth) : _max_depth(max_depth) { root = std::make_unique<Node>(rootName, Type::DIRECTORY, nullptr); }
+FileTree::FileTree(const std::string& rootName, unsigned int max_depth) : _max_depth(max_depth) { root = std::make_shared<Node>(rootName, Type::DIRECTORY, nullptr); }
 
 FileTree::Nodeptr FileTree::addDirectory(Nodeptr parent, const std::string& dirName) {
   if (parent->type == Type::FILE) {
@@ -19,7 +19,7 @@ FileTree::Nodeptr FileTree::addDirectory(Nodeptr parent, const std::string& dirN
   if (parent->folders.find(dirName) != parent->folders.end()) {
     throw std::runtime_error("Directory already exists!");
   }
-  parent->folders[dirName] = std::make_unique<Node>(dirName, Type::DIRECTORY, parent);
+  parent->folders[dirName] = std::make_shared<Node>(dirName, Type::DIRECTORY, parent);
   all_directories.push_back(parent->folders[dirName]);
   directory_count++;
   return parent->folders[dirName];
