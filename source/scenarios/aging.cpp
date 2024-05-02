@@ -382,7 +382,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   // spdlog::debug("CAF input: {}", ((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity))));
 
   // Handle case when available space is less than block size. If this happens, we can't write any more data. Even thought the drive isnt completely full.
-  if (fs_status.available <= get_block_size().convert<DataUnit::B>().get_value()) {
+  if (fs_status.available <= get_block_size().convert<DataUnit::B>().get_value() * 3) {
     fs_status.available = 0;
   }
 
