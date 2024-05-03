@@ -1,5 +1,7 @@
 #include <filestorm/filefrag.h>
+#include <filestorm/utils/logger.h>
 #include <fmt/core.h>
+
 struct fiemap_extent_data {
   struct fiemap *fiemap_ptr;
 };
@@ -53,7 +55,7 @@ std::vector<extents> get_extents(const char *file_path) {
 #else
   static bool warning_printed = false;
   if (!warning_printed) {
-    spdlog::debug("This code is for Linux only and the fragmentation monitorning wont be available on other platforms. {}", file_path);
+    logger.warn("This code is for Linux only and the fragmentation monitorning wont be available on other platforms. {}", file_path);
     warning_printed = true;
   }
   return {};
