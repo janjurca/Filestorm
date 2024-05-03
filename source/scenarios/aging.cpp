@@ -6,7 +6,7 @@
 #include <filestorm/scenarios/scenario.h>
 #include <filestorm/utils.h>
 #include <filestorm/utils/fs.h>
-#include <filestorm/utils/progress_bar.h>
+#include <filestorm/utils/logger.h>
 #include <fmt/format.h>
 #include <sys/stat.h>  // for S_IRWXU
 #include <unistd.h>    // for close
@@ -52,7 +52,7 @@ void AgingScenario::run() {
     throw std::runtime_error(fmt::format("{} is not a directory!", getParameter("directory").get_string()));
   }
   if (!std::filesystem::is_empty(getParameter("directory").get_string())) {
-    spdlog::warn("Directory {} is not empty!", getParameter("directory").get_string());
+    logger.warn("Directory {} is not empty!", getParameter("directory").get_string());
     throw std::runtime_error(fmt::format("{} is not empty!", getParameter("directory").get_string()));
   }
 
@@ -86,12 +86,15 @@ void AgingScenario::run() {
   // progressbar bar(getParameter("iterations").get_int());
 
   std::vector<Result> results;
-
   ProbabilisticStateMachine psm(transtions, S);
   std::map<std::string, double> probabilities;
-
   std::vector<FileTree::Nodeptr> touched_files;
   Result result;
+
+  ///////// LOGGER settings
+  ProgressBar bar(getParameter("iterations").get_int(), "Aging Scenario");
+  logger.set_progress_bar(&bar);
+
   while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
          && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
     result.setIteration(iteration);
@@ -99,21 +102,21 @@ void AgingScenario::run() {
     psm.performTransition(probabilities);
     switch (psm.getCurrentState()) {
       case S:
-        spdlog::debug("S");
+        logger.debug("S");
         break;
       case CREATE:
-        // spdlog::debug("CREATE");
+        // logger.debug("CREATE");
         break;
       case ALTER:
-        // spdlog::debug("ALTER");
+        // logger.debug("ALTER");
         break;
       case DELETE:
-        // spdlog::debug("DELETE");
+        // logger.debug("DELETE");
         break;
       case CREATE_FILE: {
-        spdlog::debug("CREATE_FILE");
+        logger.debug("CREATE_FILE");
         FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
-        spdlog::debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
+        logger.debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
 
         int fd;
@@ -153,8 +156,8 @@ void AgingScenario::run() {
         });
         auto duration = action.exec();
         close(fd);
-        spdlog::debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
-                                  (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+        logger.debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
+                                 (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         touched_files.push_back(file_node);
 
         result.setAction(Result::Action::CREATE_FILE);
@@ -165,9 +168,9 @@ void AgingScenario::run() {
         break;
       }
       case CREATE_DIR: {
-        spdlog::debug("CREATE_DIR");
+        logger.debug("CREATE_DIR");
         auto new_dir_path = tree.newDirectoryPath();
-        spdlog::debug("CREATE_DIR {}", new_dir_path);
+        logger.debug("CREATE_DIR {}", new_dir_path);
         FileTree::Nodeptr dir_node = tree.mkdir(new_dir_path);
         auto dir_path = dir_node->path(true);
 
@@ -179,20 +182,20 @@ void AgingScenario::run() {
         break;
       }
       case ALTER_SMALLER: {
-        spdlog::debug("ALTER_SMALLER");
+        logger.debug("ALTER_SMALLER");
         break;
       }
       case ALTER_SMALLER_TRUNCATE: {
-        spdlog::debug("ALTER_SMALLER_TRUNCATE");
+        logger.debug("ALTER_SMALLER_TRUNCATE");
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
         // auto new_file_size = get_file_size(0, actual_file_size, false);
         std::uintmax_t blocksize = get_block_size().convert<DataUnit::B>().get_value();
         auto new_file_size = get_file_size(std::max(actual_file_size / 2, 10 * blocksize), actual_file_size, false);
-        spdlog::debug("ALTER_SMALLER_TRUNCATE {} from {} kB to {} kB ({})", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024, new_file_size.get_value());
+        logger.debug("ALTER_SMALLER_TRUNCATE {} from {} kB to {} kB ({})", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024, new_file_size.get_value());
         bool fallocatable = random_file->isPunchable(blocksize);
-        random_file->truncate(new_file_size.get_value());
+        random_file->truncate(blocksize, new_file_size.get_value());
         MeasuredCBAction action([&]() { truncate(random_file_path.c_str(), new_file_size.convert<DataUnit::B>().get_value()); });
         touched_files.push_back(random_file);
         auto duration = action.exec();
@@ -206,7 +209,7 @@ void AgingScenario::run() {
         break;
       }
       case ALTER_SMALLER_FALLOCATE: {
-        spdlog::debug("ALTER_SMALLER_FALLOCATE");
+        logger.debug("ALTER_SMALLER_FALLOCATE");
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #  error "Windows is not supported"
 #elif __APPLE__
@@ -214,12 +217,12 @@ void AgingScenario::run() {
         throw std::runtime_error("FALLOCATE not supported on this system");
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
         auto random_file = tree.randomPunchableFile();
-        spdlog::debug("Random file pointer: {}", fmt::ptr(random_file));
+        logger.debug("Random file pointer: {}", fmt::ptr(random_file));
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
         std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
         // Round to modulo blocksize
-        spdlog::debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_adress), std::get<1>(hole_adress));
+        logger.debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_adress), std::get<1>(hole_adress));
         MeasuredCBAction action([&]() {
           int fd = open(random_file_path.c_str(), O_RDWR);
           if (fd == -1) {
@@ -232,7 +235,7 @@ void AgingScenario::run() {
         touched_files.push_back(random_file);
         auto duration = action.exec();
         if (!random_file->isPunchable(block_size)) {
-          spdlog::warn("File {} is not punchable anymore", random_file_path);
+          logger.warn("File {} is not punchable anymore", random_file_path);
           tree.removeFromPunchableFiles(random_file);
         }
         result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
@@ -245,7 +248,7 @@ void AgingScenario::run() {
         break;
       }
       case ALTER_BIGGER: {
-        spdlog::debug("ALTER_BIGGER");
+        logger.debug("ALTER_BIGGER");
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
@@ -253,7 +256,7 @@ void AgingScenario::run() {
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
         auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value());
-        spdlog::debug("ALTER_BIGGER {} from {} to {}", random_file_path, actual_file_size, new_file_size);
+        logger.debug("ALTER_BIGGER {} from {} to {}", random_file_path, actual_file_size, new_file_size);
         int fd;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #  error "Windows is not supported"
@@ -289,8 +292,8 @@ void AgingScenario::run() {
           close(fd);
         });
         auto duration = action.exec();
-        spdlog::debug("ALTER_BIGGER {} from {} to {} in {} ms | Speed {} MB/s", random_file_path, actual_file_size, new_file_size.get_value(), duration.count() / 1000000.0,
-                      ((new_file_size.get_value() - actual_file_size) / 1024. / 1024.) / (duration.count() / 1000000000.0));
+        logger.debug("ALTER_BIGGER {} from {} to {} in {} ms | Speed {} MB/s", random_file_path, actual_file_size, new_file_size.get_value(), duration.count() / 1000000.0,
+                     ((new_file_size.get_value() - actual_file_size) / 1024. / 1024.) / (duration.count() / 1000000000.0));
         touched_files.push_back(random_file);
         result.setAction(Result::Action::ALTER_BIGGER);
         result.setOperation(Result::Operation::WRITE);
@@ -300,12 +303,12 @@ void AgingScenario::run() {
         break;
       }
       case ALTER_METADATA:
-        spdlog::debug("ALTER_METADATA");
+        logger.debug("ALTER_METADATA");
         break;
       case DELETE_FILE: {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
-        spdlog::debug("DELETE_FILE {}", random_file_path);
+        logger.debug("DELETE_FILE {}", random_file_path);
         auto file_extents = random_file->getExtentsCount(true);
 
         MeasuredCBAction action([&]() { std::filesystem::remove(random_file_path); });
@@ -317,30 +320,30 @@ void AgingScenario::run() {
         break;
       }
       case DELETE_DIR: {
-        spdlog::debug("DELETE_DIR");
+        logger.debug("DELETE_DIR");
         auto random_dir = tree.randomDirectory();
         auto random_dir_path = random_dir->path(true);
-        spdlog::debug("DELETE_DIR {}", random_dir_path);
+        logger.debug("DELETE_DIR {}", random_dir_path);
         // TODO: remove directory Is it necesary and good idea at all?
         break;
       }
       case END:
-        spdlog::debug("END");
+        logger.debug("END");
         if (getParameter("sync").get_bool()) {
-          spdlog::debug("Syncing...");
+          logger.debug("Syncing...");
           sync();
         }
         for (auto& file : touched_files) {
           auto original_extents = file->getExtentsCount(false);
           auto updated_extents = file->getExtentsCount(true);
-          spdlog::debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents);
+          logger.debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents);
           tree.total_extents_count += updated_extents - original_extents;
           if (!file->isPunchable(get_block_size().convert<DataUnit::B>().get_value())) {
             tree.removeFromPunchableFiles(file);
           }
         }
-        spdlog::debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
-                      fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
+        logger.debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
+                     fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
         touched_files.clear();
         result.commit();
         result = Result();
@@ -348,12 +351,11 @@ void AgingScenario::run() {
           throw std::runtime_error("Null pointer found");
         }
         iteration++;
+        bar.update(iteration);
         break;
       default:
         break;
     }
-
-    // bar.update();
   }
 
   // Count files and total extent count
@@ -364,8 +366,8 @@ void AgingScenario::run() {
     file_count++;
     total_extents += file->getExtentsCount();
   }
-  spdlog::info("File count: {}, total extents: {}", file_count, total_extents);
-
+  logger.info("File count: {}, total extents: {}", file_count, total_extents);
+  logger.set_progress_bar(nullptr);
   // cleanup
   for (auto& file : tree.all_files) {
     std::filesystem::remove(file->path(true));
@@ -378,8 +380,8 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   auto fs_status = fs_utils::get_fs_status(getParameter("directory").get_string());
 
   // double CAF(double x) { return sqrt(1 - (x * x)); }
-  // spdlog::debug("Capacity: {}, available: {}", fs_status.capacity, fs_status.available);
-  // spdlog::debug("CAF input: {}", ((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity))));
+  // logger.debug("Capacity: {}, available: {}", fs_status.capacity, fs_status.available);
+  // logger.debug("CAF input: {}", ((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity))));
 
   // Handle case when available space is less than block size. If this happens, we can't write any more data. Even thought the drive isnt completely full.
   if (fs_status.available <= get_block_size().convert<DataUnit::B>().get_value() * 3) {
@@ -421,7 +423,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
     logMessage += fmt::format("pAST: {:.2f}, pASF: {:.2f}, sum pAS {:.2f} ", probabilities["pAST"], probabilities["pASF"], probabilities["pAST"] + probabilities["pASF"]);
     logMessage += fmt::format("pDD: {:.2f}, pDF: {:.2f}, sum pD {:.2f} ", probabilities["pDD"], probabilities["pDF"], probabilities["pDD"] + probabilities["pDF"]);
     logMessage += fmt::format("pCF: {:.2f}, pCD: {:.2f}, sum pC {:.2f} ", probabilities["pCF"], probabilities["pCD"], probabilities["pCF"] + probabilities["pCD"]);
-    spdlog::debug(logMessage);
+    logger.debug(logMessage);
   }
 }
 
@@ -456,6 +458,6 @@ DataSize<DataUnit::B> AgingScenario::get_file_size() {
   auto max_size = DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>();
   auto min_size = DataSize<DataUnit::B>::fromString(getParameter("minfsize").get_string()).convert<DataUnit::B>();
   auto fsize = get_file_size(min_size.get_value(), max_size.get_value());
-  // spdlog::debug("get_file_size: {} - {} : {} ", min_size.get_value(), max_size.get_value(), fsize.get_value());
+  // logger.debug("get_file_size: {} - {} : {} ", min_size.get_value(), max_size.get_value(), fsize.get_value());
   return fsize;
 }

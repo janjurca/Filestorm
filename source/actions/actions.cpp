@@ -56,7 +56,6 @@ void VirtualMonitoredAction::log_values() { throw "Not implemented"; }
 
 void VirtualMonitoredAction::start_monitor() {
   m_monitor_started_at = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
-  spdlog::debug("VirtualMonitoredAction::start_monitor started at: {}", m_monitor_started_at.count());
   if (!m_running) {
     m_running = true;
     m_thread = std::thread([this]() {
@@ -66,7 +65,6 @@ void VirtualMonitoredAction::start_monitor() {
       }
     });
   }
-  spdlog::debug("VirtualMonitoredAction::start_monitor finished");
 }
 
 void VirtualMonitoredAction::stop_monitor() {

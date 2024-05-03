@@ -1,6 +1,7 @@
 #include <filestorm/actions/actions.h>
 #include <filestorm/actions/rw_actions.h>
 #include <filestorm/data_sizes.h>
+#include <filestorm/utils/logger.h>
 #include <filestorm/version.h>
 #include <getopt.h>
 #include <spdlog/spdlog.h>
@@ -30,7 +31,7 @@ auto main(int argc, char** argv) -> int {
   spdlog::set_level(spdlog::level::debug);
 
   if (optind >= argc) {
-    spdlog::error("Error: Insufficient arguments.");
+    logger.error("Error: Insufficient arguments.");
     displayHelp();
     return 1;
   }
@@ -63,15 +64,12 @@ auto main(int argc, char** argv) -> int {
     auto scenario = config.get_scenario(positionalArgument);
     int new_argc = argc - optind;
     char** new_argv = argv + optind;
-    for (int i = 0; i < new_argc; i++) {
-      spdlog::debug("new_argv[{}]: {}", i, new_argv[i]);
-    }
 
     scenario->setup(new_argc, new_argv);
     scenario->run();
     scenario->save();
   } catch (const BadScenarioSelected& e) {
-    spdlog::error("Error on main: {}", e.what());
+    logger.error("Error on main: {}", e.what());
     return 1;
   }
 

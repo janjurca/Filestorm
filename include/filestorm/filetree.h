@@ -3,6 +3,7 @@
 #include <filestorm/filefrag.h>
 #include <filestorm/utils.h>
 #include <filestorm/utils/fs.h>
+#include <filestorm/utils/logger.h>
 
 #include <atomic>
 #include <iostream>
@@ -47,8 +48,6 @@ public:
       }
       return parent->path(include_root) + "/" + name;
     }
-
-    ~Node() { spdlog::debug("Node {} deleted", fmt::ptr(this)); }
 
     int getExtentsCount(bool update = true) {
       if (update) {
@@ -96,18 +95,18 @@ public:
       }
     }
 
-    void truncate(std::uintmax_t new_size) {
+    void truncate(std::uintmax_t blocksize, std::uintmax_t new_size) {
       // There is the need to adjust the fallocation number according to new truncated size
       std::uintmax_t old_size = size();
-      if (new_size > old_size) {
+      if (new_size >= old_size) {
         return;
       }
       int index = 1;
       std::uintmax_t hole_size = old_size / 2;
       std::uintmax_t start = 0, end = hole_size;
-      while (end < new_size) {
+      while (end < new_size && hole_size > blocksize * 3) {
         if (index < 300) {
-          spdlog::debug("start: {}, end: {}, hole_size: {}, new_size: {}, index: {}, old_size: {}", start, end, hole_size, new_size, index, old_size);
+          //  logger.debug("start: {}, end: {}, hole_size: {}, new_size: {}, index: {}, old_size: {}", start, end, hole_size, new_size, index, old_size);
         } else {
           throw std::runtime_error("Too many iterations");
         }

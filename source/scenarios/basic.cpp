@@ -2,6 +2,7 @@
 #include <filestorm/actions/rw_actions.h>
 #include <filestorm/data_sizes.h>
 #include <filestorm/scenarios/scenario.h>
+#include <filestorm/utils/logger.h>
 #include <spdlog/spdlog.h>
 
 BasicScenario::BasicScenario() {
@@ -44,23 +45,23 @@ void BasicScenario::run() {
       auto speed = diff / duration_diff.count();     // bytes per nanosecond
       auto speed_mb_s = speed * 1000 * 1000 * 1000;  // bytes per second
       auto speed_mb = speed_mb_s / 1024 / 1024;      // megabytes per second
-      spdlog::info("Action: {} | Value: {} | Duration: {} | Speed: {} MB/s", key, prev_value, duration_diff.count(), speed_mb);
+      logger.info("Action: {} | Value: {} | Duration: {} | Speed: {} MB/s", key, prev_value, duration_diff.count(), speed_mb);
     }
   };
   if (operation == "read") {
-    spdlog::info("Read operation");
+    logger.info("Read operation");
     action = new ReadMonitoredAction(std::chrono::milliseconds(1000), log_func, attributes);
   } else if (operation == "write") {
-    spdlog::info("Write operation");
+    logger.info("Write operation");
     action = new WriteMonitoredAction(std::chrono::milliseconds(1000), log_func, attributes);
   } else if (operation == "randread") {
-    spdlog::info("Read-Write operation");
+    logger.info("Read-Write operation");
     action = new RandomReadMonitoredAction(std::chrono::milliseconds(1000), log_func, attributes);
   } else if (operation == "randwrite") {
-    spdlog::info("Read-Write operation");
+    logger.info("Read-Write operation");
     action = new RandomWriteMonitoredAction(std::chrono::milliseconds(1000), log_func, attributes);
   } else {
-    spdlog::error("Invalid operation");
+    logger.error("Invalid operation");
     return;
   }
   action->exec();
