@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <map>
 
 class ProgressBar {
   int total;
@@ -20,6 +21,8 @@ class ProgressBar {
 
   UnitType unit_type;
 
+  std::map<std::string, std::string> metas = {};
+
 public:
   ProgressBar(int total, const std::string label) : total(total), label(label) {
     unit_type = UnitType::Count;
@@ -29,13 +32,20 @@ public:
     unit_type = UnitType::Time;
     print_bar();
   }
+  ProgressBar(const std::string label) : total(0), label(label) {}
 
-  void clear_line();
+  void clear_line(bool overwrite = true);
   void disable() { active = false; }
 
   void update(int current);
+  void update(std::chrono::seconds current) { update(current.count()); }
   bool is_active() { return active; }
-  void print_bar();
+  void print_bar(bool clear = false);
+  void set_meta(const std::string &key, const std::string &value) { metas[key] = value; }
+  void get_meta(const std::string &key) { metas[key]; }
+  void clear_meta(const std::string &key) { metas.erase(key); }
+  void set_total(int total);
+  void set_total(std::chrono::seconds total);
 
   ProgressBar &operator++();
   ProgressBar operator++(int);

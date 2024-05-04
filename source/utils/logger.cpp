@@ -2,21 +2,22 @@
 
 FilestormLogger logger;
 
-void ProgressBar::clear_line() {
+void ProgressBar::clear_line(bool overwrite) {
   std::cout << "\r";
-  for (int i = 0; i < width; i++) {
-    std::cout << " ";
+  if (overwrite) {
+    for (int i = 0; i < width; i++) {
+      std::cout << " ";
+    }
+    std::cout << "\r";
   }
-  std::cout << "\r";
 }
 
 void ProgressBar::update(int current) {
   this->current = current;
-  clear_line();
-  print_bar();
+  print_bar(true);
 }
 
-void ProgressBar::print_bar() {
+void ProgressBar::print_bar(bool clear) {
   if (!is_active()) {
     return;
   }
@@ -42,15 +43,18 @@ void ProgressBar::print_bar() {
   }
   float progress = (float)current / total;
   std::string infos = "";
+  for (auto meta : metas) {
+    infos += fmt::format("[{}={}]", meta.first, meta.second);
+  }
   if (unit_type == UnitType::Count) {
     std::chrono::duration<double> remaining = std::chrono::duration<double>((total - current) / (current / (elapsed / 1000.0)));
     double it_per_s = current / (elapsed / 1000.0);
 
-    infos = fmt::format("[{}/{}][{:.1f} it/s][{:.1f}s Remaining]", current, total, it_per_s, remaining.count());
-  } else {
+    infos += fmt::format("[{}/{}][{:.1f} it/s][ Remaining]", current, total, it_per_s, fmt::format("{:%H:%M:%S}", remaining));
+  } else if (unit_type == UnitType::Time) {
     std::chrono::duration<int> done = std::chrono::duration<int>(current);
     std::chrono::duration<int> total_duration = std::chrono::duration<int>(total);
-    infos = fmt::format("[{}/{}]", fmt::format("{:%H:%M:%S}", done), fmt::format("{:%H:%M:%S}", total_duration));
+    infos += fmt::format("[{}/{}]", fmt::format("{:%H:%M:%S}", done), fmt::format("{:%H:%M:%S}", total_duration));
   }
   std::string prefix_infos = fmt::format("{} {} %", label, (int)(progress * 100));
   int bar_width = width - prefix_infos.size() - infos.size() - 2;
@@ -62,6 +66,9 @@ void ProgressBar::print_bar() {
   for (int i = progress_width; i < bar_width; i++) {
     bar += " ";
   }
+  if (clear) {
+    clear_line(false);
+  }
   std::cout << prefix_infos << "[" << bar << "]" << infos;
   std::cout.flush();
   if (current == total) {
@@ -72,8 +79,7 @@ void ProgressBar::print_bar() {
 
 ProgressBar& ProgressBar::operator++() {
   current++;
-  clear_line();
-  print_bar();
+  print_bar(true);
   return *this;
 }
 
@@ -81,4 +87,13 @@ ProgressBar ProgressBar::operator++(int) {
   ProgressBar temp = *this;
   ++*this;
   return temp;
+}
+
+void ProgressBar::set_total(int total) {
+  this->total = total;
+  unit_type = UnitType::Count;
+}
+void ProgressBar::set_total(std::chrono::seconds total) {
+  this->total = total.count();
+  unit_type = UnitType::Time;
 }

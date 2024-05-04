@@ -92,7 +92,15 @@ void AgingScenario::run() {
   Result result;
 
   ///////// LOGGER settings
-  ProgressBar bar(getParameter("iterations").get_int(), "Aging Scenario");
+
+  ProgressBar bar("Aging Scenario");
+  if (getParameter("iterations").get_int() != -1) {
+    logger.warn("Iterations are set to {}", getParameter("iterations").get_int());
+    bar.set_total(getParameter("iterations").get_int());
+  } else {
+    logger.warn("Time is set to {}", getParameter("time").get_string());
+    bar.set_total(std::chrono::duration_cast<std::chrono::seconds>(max_time));
+  }
   logger.set_progress_bar(&bar);
 
   while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
@@ -351,7 +359,9 @@ void AgingScenario::run() {
           throw std::runtime_error("Null pointer found");
         }
         iteration++;
-        bar.update(iteration);
+        bar.set_meta("extents", fmt::format("{}", tree.total_extents_count));
+        bar.set_meta("f-count", fmt::format("{}", tree.all_files.size()));
+        bar.update(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start));
         break;
       default:
         break;
