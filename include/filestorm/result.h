@@ -22,12 +22,12 @@ private:
   std::string _path;
   DataSize<DataUnit::B> _size;
   std::chrono::nanoseconds _duration;
-  int64_t _extents_count;
-  std::vector<extents> _extents;
+  int64_t _total_extents_count;
+  int64_t _file_extent_count;
 
 public:
-  Result(int iteration, Action action, Operation operation, std::string path, DataSize<DataUnit::B> size, std::chrono::nanoseconds duration, int64_t extents_count)
-      : _iteration(iteration), _action(action), _operation(operation), _path(path), _size(size), _duration(duration), _extents_count(extents_count) {}
+  Result(int iteration, Action action, Operation operation, std::string path, DataSize<DataUnit::B> size, std::chrono::nanoseconds duration, int64_t extents_count, int64_t file_extent_count)
+      : _iteration(iteration), _action(action), _operation(operation), _path(path), _size(size), _duration(duration), _total_extents_count(extents_count), _file_extent_count(file_extent_count) {}
   Result() = default;
 
   int getIteration() const { return _iteration; }
@@ -36,7 +36,8 @@ public:
   std::string getPath() const { return _path; }
   DataSize<DataUnit::B> getSize() const { return _size; }
   std::chrono::nanoseconds getDuration() const { return _duration; }
-  int64_t getExtentsCount() const { return _extents_count; }
+  int64_t getExtentsCount() const { return _total_extents_count; }
+  int64_t getFileExtentCount() const { return _file_extent_count; }
 
   // setters
   void setIteration(int iteration) { _iteration = iteration; }
@@ -45,12 +46,8 @@ public:
   void setPath(std::string path) { _path = path; }
   void setSize(DataSize<DataUnit::B> size) { _size = size; }
   void setDuration(std::chrono::nanoseconds duration) { _duration = duration; }
-  void setExtentsCount(int64_t extents_count) { _extents_count = extents_count; }
-  void setExtents(std::vector<extents> extents) {
-    for (auto& extent : extents) {
-      _extents.push_back(extent);
-    }
-  }
+  void setExtentsCount(int64_t extents_count) { _total_extents_count = extents_count; }
+  void setFileExtentCount(int64_t file_extent_count) { _file_extent_count = file_extent_count; }
 
   void commit() { results.push_back(*this); }
 
@@ -97,7 +94,8 @@ public:
         jsonResult["path"] = result.getPath();
         jsonResult["size"] = result.getSize().get_value();
         jsonResult["duration"] = result.getDuration().count();
-        jsonResult["extents_count"] = result.getExtentsCount();
+        jsonResult["_total_extents_count"] = result.getExtentsCount();
+        jsonResult["_file_extent_count"] = result.getFileExtentCount();
         jsonResults.push_back(jsonResult);
       }
       file << jsonResults.dump(2);

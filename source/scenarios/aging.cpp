@@ -349,6 +349,9 @@ void AgingScenario::run() {
           if (!file->isPunchable(get_block_size().convert<DataUnit::B>().get_value())) {
             tree.removeFromPunchableFiles(file);
           }
+          if (file->path(true) == result.getPath()) {
+            result.setFileExtentCount(updated_extents);
+          }
         }
         logger.debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
                      fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
