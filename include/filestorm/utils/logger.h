@@ -72,12 +72,12 @@ protected:
 
 public:
   std::shared_ptr<spdlog::logger> get_logger() { return logger; }
-  template <typename... Args> inline void trace(spdlog::format_string_t<Args...> fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->trace(fmt, std::forward<Args>(args)...)); }
-  template <typename... Args> inline void debug(spdlog::format_string_t<Args...> fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->debug(fmt, std::forward<Args>(args)...)); }
-  template <typename... Args> inline void info(spdlog::format_string_t<Args...> fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->info(fmt, std::forward<Args>(args)...)); }
-  template <typename... Args> inline void warn(spdlog::format_string_t<Args...> fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->warn(fmt, std::forward<Args>(args)...)); }
-  template <typename... Args> inline void error(spdlog::format_string_t<Args...> fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->error(fmt, std::forward<Args>(args)...)); }
-  template <typename... Args> inline void critical(spdlog::format_string_t<Args...> fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->critical(fmt, std::forward<Args>(args)...)); }
+  template <typename... Args> inline void trace(const std::string fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->trace(fmt, std::forward<Args>(args)...)); }
+  template <typename... Args> inline void debug(const std::string fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->debug(fmt, std::forward<Args>(args)...)); }
+  template <typename... Args> inline void info(const std::string fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->info(fmt, std::forward<Args>(args)...)); }
+  template <typename... Args> inline void warn(const std::string fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->warn(fmt, std::forward<Args>(args)...)); }
+  template <typename... Args> inline void error(const std::string fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->error(fmt, std::forward<Args>(args)...)); }
+  template <typename... Args> inline void critical(const std::string fmt, Args &&...args) { PRINT_WITH_CLEAR(logger->critical(fmt, std::forward<Args>(args)...)); }
 
   template <typename T> inline void trace(const T &msg) { PRINT_WITH_CLEAR(logger->trace(msg);) }
   template <typename T> inline void debug(const T &msg) { PRINT_WITH_CLEAR(logger->debug(msg);) }
