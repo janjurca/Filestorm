@@ -225,7 +225,6 @@ void AgingScenario::run() {
         throw std::runtime_error("FALLOCATE not supported on this system");
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
         auto random_file = tree.randomPunchableFile();
-        logger.debug("Random file pointer: {}", fmt::ptr(random_file));
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
         std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
@@ -243,7 +242,7 @@ void AgingScenario::run() {
         touched_files.push_back(random_file);
         auto duration = action.exec();
         if (!random_file->isPunchable(block_size)) {
-          logger.warn("File {} is not punchable anymore", random_file_path);
+          logger.debug("File {} is not punchable anymore", random_file_path);
           tree.removeFromPunchableFiles(random_file);
         }
         result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
@@ -356,6 +355,7 @@ void AgingScenario::run() {
         logger.debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
                      fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
         touched_files.clear();
+        result.setExtentsCount(tree.total_extents_count);
         result.commit();
         result = Result();
         if (tree.findNullPointer()) {

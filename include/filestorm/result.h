@@ -94,8 +94,8 @@ public:
         jsonResult["path"] = result.getPath();
         jsonResult["size"] = result.getSize().get_value();
         jsonResult["duration"] = result.getDuration().count();
-        jsonResult["_total_extents_count"] = result.getExtentsCount();
-        jsonResult["_file_extent_count"] = result.getFileExtentCount();
+        jsonResult["total_extents_count"] = result.getExtentsCount();
+        jsonResult["file_extent_count"] = result.getFileExtentCount();
         jsonResults.push_back(jsonResult);
       }
       file << jsonResults.dump(2);
