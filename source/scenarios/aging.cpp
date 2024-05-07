@@ -500,7 +500,6 @@ int AgingScenario::open_file(const char* path, int flags) {
     }
   }
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-  int flags = flags;
   if (getParameter("direct_io").get_bool()) {
     flags |= O_DIRECT;
   }
