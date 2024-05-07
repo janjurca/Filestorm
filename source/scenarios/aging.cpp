@@ -68,7 +68,9 @@ void AgingScenario::run() {
   transtions.emplace("ALTER->ALTER_METADATA", Transition(ALTER, ALTER_METADATA, "pAM"));
   transtions.emplace("DELETE->DELETE_FILE", Transition(DELETE, DELETE_FILE, "pDF"));
   transtions.emplace("DELETE->DELETE_DIR", Transition(DELETE, DELETE_DIR, "pDD"));
-  transtions.emplace("CREATE_FILE->END", Transition(CREATE_FILE, END, "p1"));
+  transtions.emplace("CREATE_FILE->CREATE_FILE_OVERWRITE", Transition(CREATE_FILE, CREATE_FILE_OVERWRITE, "pCFO"));
+  transtions.emplace("CREATE_FILE->CREATE_FILE_READ", Transition(CREATE_FILE, CREATE_FILE_READ, "pCFR"));
+  transtions.emplace("CREATE_FILE->END", Transition(CREATE_FILE, END, "pCFE"));
   transtions.emplace("CREATE_DIR->END", Transition(CREATE_DIR, END, "p1"));
   transtions.emplace("ALTER_SMALLER->ALTER_SMALLER_TRUNCATE", Transition(ALTER_SMALLER, ALTER_SMALLER_TRUNCATE, "pAST"));
   transtions.emplace("ALTER_SMALLER->ALTER_SMALLER_FALLOCATE", Transition(ALTER_SMALLER, ALTER_SMALLER_FALLOCATE, "pASF"));
@@ -122,41 +124,13 @@ void AgingScenario::run() {
         // logger.debug("DELETE");
         break;
       case CREATE_FILE: {
-        logger.debug("CREATE_FILE");
         FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
         logger.debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
-
-        int fd;
+        int fd = open_file(file_node->path(true).c_str(), O_WRONLY | O_CREAT | O_TRUNC);
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-#  error "Windows is not supported"
-#elif __APPLE__
-        fd = open(file_node->path(true).c_str(), O_RDWR | O_CREAT, S_IRWXU);
-        if (getParameter("direct_io").get_bool() && fd != -1) {
-          if (fcntl(fd, F_NOCACHE, 1) == -1) {
-            close(fd);
-            throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
-          }
-        }
-#elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-        int flags = O_RDWR | O_CREAT;
-        if (getParameter("direct_io").get_bool()) {
-          flags |= O_DIRECT;
-        }
-        fd = open(file_node->path(true).c_str(), flags, S_IRWXU);
-#else
-#  error "Unknown system"
-#endif
-        if (fd == -1) {
-          std::cerr << "Error opening file: " << strerror(errno) << std::endl;
-          if (errno == EINVAL) {
-            throw std::runtime_error("Error: Direct IO not supported");
-          }
-          throw std::runtime_error(fmt::format("Error opening file {}", file_node->path(true)));
-        }
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size.get_value(); written_bytes += block_size) {
             write(fd, line.get(), block_size);
@@ -175,6 +149,61 @@ void AgingScenario::run() {
         result.setDuration(duration);
         break;
       }
+      case CREATE_FILE_OVERWRITE: {
+        auto prev_file = touched_files.back();
+        assert(prev_file != nullptr);
+        assert(prev_file->getFallocationCount() == 0);
+        auto prev_file_path = prev_file->path(true);
+        auto file_size = fs_utils::file_size(prev_file_path);
+        logger.debug("CREATE_FILE_OVERWRITE {} size {}", prev_file_path, file_size);
+        std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
+        size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+        generate_random_chunk(line.get(), block_size);
+        int fd = open_file(prev_file_path.c_str(), O_WRONLY);
+        MeasuredCBAction action([&]() {
+          for (uint64_t written_bytes = 0; written_bytes < file_size; written_bytes += block_size) {
+            write(fd, line.get(), block_size);
+          }
+        });
+        auto duration = action.exec();
+        close(fd);
+        logger.debug(fmt::format("CREATE_FILE_OVERWRITE {} Wrote {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0,
+                                 (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+
+        result.setAction(Result::Action::CREATE_FILE_OVERWRITE);
+        result.setOperation(Result::Operation::OVERWRITE);
+        result.setPath(prev_file_path);
+        result.setSize(file_size);
+        result.setDuration(duration);
+        break;
+      }
+      case CREATE_FILE_READ: {
+        auto prev_file = touched_files.back();
+        assert(prev_file != nullptr);
+        assert(prev_file->getFallocationCount() == 0);
+        auto prev_file_path = prev_file->path(true);
+        auto file_size = fs_utils::file_size(prev_file_path);
+        logger.debug("CREATE_FILE_READ {} size {}", prev_file_path, file_size);
+        int fd = open_file(prev_file_path.c_str(), O_RDONLY);
+        MeasuredCBAction action([&]() {
+          std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
+          size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+          for (uint64_t read_bytes = 0; read_bytes < file_size; read_bytes += block_size) {
+            read(fd, line.get(), block_size);
+          }
+        });
+        auto duration = action.exec();
+        close(fd);
+        logger.debug(fmt::format("CREATE_FILE_READ {} Read {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0,
+                                 (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+        result.setAction(Result::Action::CREATE_FILE_READ);
+        result.setOperation(Result::Operation::READ);
+        result.setPath(prev_file_path);
+        result.setSize(DataSize<DataUnit::B>(file_size));
+        result.setDuration(duration);
+        break;
+      }
+
       case CREATE_DIR: {
         logger.debug("CREATE_DIR");
         auto new_dir_path = tree.newDirectoryPath();
@@ -264,27 +293,7 @@ void AgingScenario::run() {
         auto actual_file_size = fs_utils::file_size(random_file_path);
         auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value());
         logger.debug("ALTER_BIGGER {} from {} to {}", random_file_path, actual_file_size, new_file_size);
-        int fd;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-#  error "Windows is not supported"
-#elif __APPLE__
-        fd = open(random_file_path.c_str(), O_WRONLY | O_APPEND, S_IRWXU);
-        if (fcntl(fd, F_NOCACHE, 1) == -1 && fd != -1) {
-          close(fd);
-          throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
-        }
-#elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-        fd = open(random_file_path.c_str(), O_DIRECT | O_WRONLY | O_APPEND, S_IRWXU);
-#else
-#  error "Unknown system"
-#endif
-        if (fd == -1) {
-          std::cerr << "Error opening file: " << strerror(errno) << std::endl;
-          if (errno == EINVAL) {
-            throw std::runtime_error("Error: Direct IO not supported");
-          }
-          throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
-        }
+        int fd = open_file(random_file_path.c_str(), O_WRONLY | O_APPEND);
         auto current_size = lseek(fd, 0, SEEK_END);
         if (current_size == -1) {
           perror("Error getting file size");
@@ -424,6 +433,9 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pDF"] = 1 - probabilities["pDD"];
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
   probabilities["pCD"] = 1 - probabilities["pCF"];
+  probabilities["pCFO"] = 0.1;
+  probabilities["pCFR"] = 0.1;
+  probabilities["pCFE"] = 1 - probabilities["pCFO"] - probabilities["pCFR"];
   probabilities["p1"] = 1.0;
 
   if (getParameter("features-log-probs").get_bool()) {
@@ -473,4 +485,35 @@ DataSize<DataUnit::B> AgingScenario::get_file_size() {
   auto fsize = get_file_size(min_size.get_value(), max_size.get_value());
   // logger.debug("get_file_size: {} - {} : {} ", min_size.get_value(), max_size.get_value(), fsize.get_value());
   return fsize;
+}
+
+int AgingScenario::open_file(const char* path, int flags) {
+  int fd;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#  error "Windows is not supported"
+#elif __APPLE__
+  fd = open(path, flags, S_IRWXU);
+  if (getParameter("direct_io").get_bool() && fd != -1) {
+    if (fcntl(fd, F_NOCACHE, 1) == -1) {
+      close(fd);
+      throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
+    }
+  }
+#elif __linux__ || __unix__ || defined(_POSIX_VERSION)
+  int flags = flags;
+  if (getParameter("direct_io").get_bool()) {
+    flags |= O_DIRECT;
+  }
+  fd = open(file_node->path(true).c_str(), flags, S_IRWXU);
+#else
+#  error "Unknown system"
+#endif
+  if (fd == -1) {
+    std::cerr << "Error opening file: " << strerror(errno) << std::endl;
+    if (errno == EINVAL) {
+      throw std::runtime_error("Error: Direct IO not supported");
+    }
+    throw std::runtime_error(fmt::format("Error opening file {}", path));
+  }
+  return fd;
 }

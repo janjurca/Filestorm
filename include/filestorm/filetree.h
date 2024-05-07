@@ -49,6 +49,8 @@ public:
       return parent->path(include_root) + "/" + name;
     }
 
+    int getFallocationCount() { return fallocated_count; }
+
     int getExtentsCount(bool update = true) {
       if (update) {
         if (type == Type::FILE) {
