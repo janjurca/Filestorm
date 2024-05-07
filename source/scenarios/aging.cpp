@@ -71,6 +71,8 @@ void AgingScenario::run() {
   transtions.emplace("CREATE_FILE->CREATE_FILE_OVERWRITE", Transition(CREATE_FILE, CREATE_FILE_OVERWRITE, "pCFO"));
   transtions.emplace("CREATE_FILE->CREATE_FILE_READ", Transition(CREATE_FILE, CREATE_FILE_READ, "pCFR"));
   transtions.emplace("CREATE_FILE->END", Transition(CREATE_FILE, END, "pCFE"));
+  transtions.emplace("CREATE_FILE_OVERWRITE->END", Transition(CREATE_FILE_OVERWRITE, END, "p1"));
+  transtions.emplace("CREATE_FILE_READ->END", Transition(CREATE_FILE_READ, END, "p1"));
   transtions.emplace("CREATE_DIR->END", Transition(CREATE_DIR, END, "p1"));
   transtions.emplace("ALTER_SMALLER->ALTER_SMALLER_TRUNCATE", Transition(ALTER_SMALLER, ALTER_SMALLER_TRUNCATE, "pAST"));
   transtions.emplace("ALTER_SMALLER->ALTER_SMALLER_FALLOCATE", Transition(ALTER_SMALLER, ALTER_SMALLER_FALLOCATE, "pASF"));
