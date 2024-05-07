@@ -47,7 +47,7 @@ TEST_CASE("Testing Result class functionality") {
     std::string filename = "test_results.json";
     std::filesystem::remove(filename);
 
-    Result r(1, Result::CREATE_DIR, Result::WRITE, "/dir/path", DataSize<DataUnit::B>(2048), std::chrono::nanoseconds(200), 10);
+    Result r(1, Result::CREATE_DIR, Result::WRITE, "/dir/path", DataSize<DataUnit::B>(2048), std::chrono::nanoseconds(200), 10, 0);
     r.commit();
 
     CHECK(Result::results.size() == 1);  // Ensure the result is committed
