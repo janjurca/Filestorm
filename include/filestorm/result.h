@@ -59,6 +59,10 @@ public:
         return "CREATE_FILE";
       case CREATE_DIR:
         return "CREATE_DIR";
+      case CREATE_FILE_OVERWRITE:
+        return "CREATE_FILE_OVERWRITE";
+      case CREATE_FILE_READ:
+        return "CREATE_FILE_READ";
       case ALTER_SMALLER_TRUNCATE:
         return "ALTER_SMALLER_TRUNCATE";
       case ALTER_SMALLER_FALLOCATE:
@@ -66,7 +70,7 @@ public:
       case ALTER_BIGGER:
         return "ALTER_BIGGER";
       default:
-        return "Unknown Action";
+        throw std::runtime_error("Unknown Action");
     }
   }
 
