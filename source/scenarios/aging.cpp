@@ -504,7 +504,7 @@ int AgingScenario::open_file(const char* path, int flags) {
   if (getParameter("direct_io").get_bool()) {
     flags |= O_DIRECT;
   }
-  fd = open(file_node->path(true).c_str(), flags, S_IRWXU);
+  fd = open(path, flags, S_IRWXU);
 #else
 #  error "Unknown system"
 #endif
