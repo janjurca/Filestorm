@@ -28,7 +28,7 @@ void displayHelp() {
 void displayVersion() { std::cout << FILESTORM_VERSION << std::endl; }
 
 auto main(int argc, char** argv) -> int {
-  spdlog::set_level(spdlog::level::debug);
+  spdlog::set_level(spdlog::level::info);
 
   if (optind >= argc) {
     logger.error("Error: Insufficient arguments.");
