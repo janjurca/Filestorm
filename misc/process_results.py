@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 parser = argparse.ArgumentParser()
 parser.add_argument("--file", nargs='+', required=True, help="List of JSON files")
 parser.add_argument("--iterations", type=int, default=70000, help="Number of iterations")
+parser.add_argument("--operations", nargs='+', required=True, help="List of operations to visualize")
 args = parser.parse_args()
 
 # Proložení křivek dat
@@ -22,38 +23,37 @@ def fit_curve(x, y, degree=10):
 
 colors = ['Reds', 'Blues', 'Greens', 'Purples', 'Oranges', 'Greys']
 
+fig, axes = plt.subplots(len(args.operations), 1, figsize=(10, 6 * len(args.operations)))
+
 for i, file_path in enumerate(args.file):
     print(f">>>>>>>>>>>>>>>>> Processing {file_path}")
     with open(file_path) as fd:
         data = pd.read_json(fd)
+    
     data = data[data["iteration"] <= args.iterations]
-    create_file = data[data["action"] == "CREATE_FILE"]
-    create_file["duration_per_size"] = create_file["duration"] / create_file["size"]
-    # original duration is in nanoseconds
-    create_file["duration_seconds"] = create_file["duration"] / 1e9
-    create_file["speed_mbs"] = create_file["size"] / create_file["duration_seconds"] / 1024 / 1024
 
-    marker_size = 10 #create_file["_file_extent_count"] 
-    marker_size = create_file["size"] / 1024/1024/20  # Adjust the division factor as needed
+    for j, operation in enumerate(args.operations):
+        operation_data = data[data["action"] == operation]
+        operation_data["duration_per_size"] = operation_data["duration"] / operation_data["size"]
+        operation_data["duration_seconds"] = operation_data["duration"] / 1e9
+        operation_data["speed_mbs"] = operation_data["size"] / operation_data["duration_seconds"] / 1024 / 1024
 
-    try:
-        marker_color = create_file["file_extent_count"]
-    except KeyError:
-        marker_color = create_file["_file_extent_count"]
+        marker_size = operation_data["size"] / 1024 / 1024 / 20  # Adjust the division factor as needed
 
-    plt.scatter(create_file["iteration"], create_file["speed_mbs"], s=marker_size, c=marker_color, cmap=colors[i], alpha=0.5, label=file_path)
-    colorbar = plt.colorbar()
-    colorbar.set_label('File Extent Count')
+        try:
+            marker_color = operation_data["file_extent_count"]
+        except KeyError:
+            marker_color = operation_data["_file_extent_count"]
 
-    # Fit curve
-    polynomial = fit_curve(create_file["iteration"], create_file["speed_mbs"])
-    plt.plot(create_file["iteration"], polynomial(create_file["iteration"]), label=f'{file_path} - Fitted Curve')
+        axes[j].scatter(operation_data["iteration"], operation_data["speed_mbs"], s=marker_size, c=marker_color, cmap=colors[i], alpha=0.5, label=f"{file_path} - {operation}")
+        axes[j].set_xlabel('Time')
+        axes[j].set_ylabel('Speed MB/s')
+        axes[j].set_title(f'{operation} Speed Analysis')
+        axes[j].legend()
 
-plt.xlabel('Time')
-plt.ylabel('Speed MB/s')
-plt.title('Create file - sync 64k write')
-plt.legend()
+        # Fit curve for each operation
+        polynomial = fit_curve(operation_data["iteration"], operation_data["speed_mbs"])
+        axes[j].plot(operation_data["iteration"], polynomial(operation_data["iteration"]), label=f'{file_path} - {operation} Fitted Curve')
 
-## Add colorbar legend
-
+plt.tight_layout()
 plt.show()

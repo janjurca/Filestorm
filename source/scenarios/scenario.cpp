@@ -8,7 +8,7 @@
 
 Scenario::Scenario() {
   addParameter(Parameter("h", "help", "Show help", "false", false));
-  addParameter(Parameter("", "save", "Save results to a file", "results.json", true));
+  addParameter(Parameter("", "save-to", "Save results to a file", "results.json", true));
 }
 
 Scenario::~Scenario() {}
