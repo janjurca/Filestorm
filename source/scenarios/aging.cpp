@@ -435,8 +435,8 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pDF"] = 1 - probabilities["pDD"];
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
   probabilities["pCD"] = 1 - probabilities["pCF"];
-  probabilities["pCFO"] = 0.1;
-  probabilities["pCFR"] = 0.1;
+  probabilities["pCFO"] = 0.3;
+  probabilities["pCFR"] = 0.3;
   probabilities["pCFE"] = 1 - probabilities["pCFO"] - probabilities["pCFR"];
   probabilities["p1"] = 1.0;
 
