@@ -3,6 +3,7 @@
 #include <filestorm/data_sizes.h>
 #include <filestorm/filefrag.h>
 #include <filestorm/filetree.h>
+#include <filestorm/utils/logger.h>
 
 #include <chrono>
 #include <fstream>
@@ -11,7 +12,7 @@
 
 class Result {
 public:
-  enum Action { DELETE_FILE, CREATE_FILE, CREATE_FILE_OVERWRITE, CREATE_FILE_READ, CREATE_DIR, ALTER_SMALLER_TRUNCATE, ALTER_SMALLER_FALLOCATE, ALTER_BIGGER };
+  enum Action { DELETE_FILE, CREATE_FILE, CREATE_FILE_OVERWRITE, CREATE_FILE_READ, CREATE_DIR, ALTER_SMALLER_TRUNCATE, ALTER_SMALLER_FALLOCATE, ALTER_BIGGER, NONE };
   enum Operation { WRITE, TRIM, OVERWRITE, READ };
   static std::vector<Result> results;
 
@@ -69,6 +70,8 @@ public:
         return "ALTER_SMALLER_FALLOCATE";
       case ALTER_BIGGER:
         return "ALTER_BIGGER";
+      case NONE:
+        return "NONE";
       default:
         throw std::runtime_error("Unknown Action");
     }
@@ -80,8 +83,12 @@ public:
         return "WRITE";
       case TRIM:
         return "TRIM";
+      case OVERWRITE:
+        return "OVERWRITE";
+      case READ:
+        return "READ";
       default:
-        return "Unknown Operation";
+        throw std::runtime_error("Unknown Operation");
     }
   }
 
@@ -100,6 +107,39 @@ public:
         jsonResult["duration"] = result.getDuration().count();
         jsonResult["total_extents_count"] = result.getExtentsCount();
         jsonResult["file_extent_count"] = result.getFileExtentCount();
+        jsonResults.push_back(jsonResult);
+      }
+      file << jsonResults.dump(2);
+      file.close();
+    }
+  }
+};
+
+class BasicResult {
+protected:
+  std::map<std::string, std::string> _result;
+  std::chrono::nanoseconds timestamp;
+
+public:
+  static std::vector<BasicResult> results;
+  BasicResult() = default;
+  void addResult(std::string key, std::string value) { _result[key] = value; }
+  void setTimestamp(std::chrono::nanoseconds timestamp) { this->timestamp = timestamp; }
+
+  void commit() { results.push_back(*this); }
+
+  static void save(const std::string& filename) {
+    // Save all results to a JSON file
+    std::ofstream file(filename);
+    if (file.is_open()) {
+      nlohmann::json jsonResults;
+      for (const auto& result : results) {
+        nlohmann::json jsonResult;
+        jsonResult["timestamp"] = result.timestamp.count();
+        for (const auto& pair : result._result) {
+          jsonResult[pair.first] = pair.second;
+          logger.debug("Timestamp: {} | Action: {} | Value: {}", result.timestamp.count(), pair.first, pair.second);
+        }
         jsonResults.push_back(jsonResult);
       }
       file << jsonResults.dump(2);

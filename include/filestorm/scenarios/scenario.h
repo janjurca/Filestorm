@@ -72,6 +72,7 @@ public:
   BasicScenario();
   ~BasicScenario();
   void run() override;
+  void save() override;
 };
 
 class AgingScenario : public Scenario {
