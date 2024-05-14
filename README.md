@@ -8,7 +8,9 @@
 [![Actions Status](https://github.com/janjurca/filestorm/workflows/Style/badge.svg)](https://github.com/janjurca/filestorm/actions)
 -->
 
-# Filestorm
+# Filestorm 
+
+**Work in progress - more features and documentation coming soon.**
 
 ## Table of Contents
 
