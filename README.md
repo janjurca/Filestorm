@@ -140,12 +140,17 @@ New free space is mostly created not by deleting or truncating files, but by dea
 #### Probabilistic state machine
 The probabilistic state machine is a simple state machine where the transitions between the states are controlled by probabilities. The probabilities are dynamically changing based on the current state of the filesystem. The state machine is visualised in the following diagram:
 
-![Probabilistic state machine diagram](documentation/imgs/filestorm.psm.svg)
+<center>
+<img src="documentation/imgs/filestorm.psm.svg" alt="Probabilistic state machine diagram">
+</center>
 
 For each transition there is defined o probability of transition. Hence the filestorm is young project, the probabilities are not yet fine-tuned and are mostly based on the intuition. The probabilities are defined in the `source/scenarios/aging.cpp` file. But one of the main precursors for every probability is so called capacity awareness factor CAF. The CAF is calculated as follows:
 
 $$
-CAF = \sqrt{1 - x^2} \\
+CAF = \sqrt{1 - x^2} 
+$$
+
+$$
 where:  x = \frac{used\_space}{total\_space}
 $$
 
