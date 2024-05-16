@@ -151,7 +151,7 @@ CAF = \sqrt{1 - x^2}
 $$
 
 $$
-where:  x = \frac{used\_space}{total\_space}
+where:  x = \frac{usedSpace}{totalSpace}
 $$
 
 By this calculation the CAF is 1 when the filesystem is empty and 0 when the filesystem is full. And the so called awareness means that when the concern of full filesystem is not linear but is more benevolent in first let's say 70% of the filesystem capacity.
@@ -163,7 +163,9 @@ By this calculation the CAF is 1 when the filesystem is empty and 0 when the fil
 #### File punching holes
 We need to fragment files effectively, so the implemented algorithm utilizes special mechanism for file hole which is visualised in the following diagram:
 
-![Probabilistic state machine diagram](documentation/imgs/filestorm.file_punch.svg)
+<center>
+<img src="documentation/imgs/filestorm.file_punch.svg" alt="Probabilistic state machine diagram">
+</center>
 
 For every file which is managed by filestorm. We hold the fallocation count value. This value is the number of times the file was punched in a past. Then according to the fallocation count value we can calculate the size and the position of the hole which will be punched into the file. The size of the hole is calculated using file size halving algorithm.
 For example when the file has not been punched yet we dived the file size by 2 then we substract the size of the blocksize * 2 which will be used for offsets and then the position of the hole is at the start of the file + offset and the size of the hole is the size of the file divided by 2 and substracted by offset.
@@ -185,7 +187,9 @@ The test was run on high-end NVMe SSD drive.
 
 The results shows that the filesystem was heavily fragmented (Around 20 000 fragments at the end of testing) and the performance of the filesystem was visibly decreasing over time which is means that even the SSD drives are not immune to the filesystem fragmentation.
 
-![Experiment 1 visualisation](documentation/imgs/results.pure.png)
+<center>
+    <img src="documentation/imgs/results.pure.png" alt="Experiment 1 visualisation">
+</center>
 
 While the fragmentation is decreasing the performance the output of this testing is **not** a recommendation to defragment the filesystem, because it would not be clever to do on ssd drives. The main goal of this testing is to show that the filesystem fragmentation is a real thing even on SSDs and it can be simulated, measured and most importantly benchmarked by the **Filestorm** tool.
 
