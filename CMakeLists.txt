@@ -27,16 +27,13 @@ include(cmake/CPM.cmake)
 
 # PackageProject.cmake will be used to make our target installable
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.11.1")
+# CPMAddPackage( NAME nlohmann_json GITHUB_REPOSITORY nlohmann/json VERSION 3.9.1 OPTIONS
+# "JSON_BuildTests OFF" )
 
-# ---- Set to prefer static libraries ----
-set(BUILD_SHARED_LIBS OFF)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ".lib")
-
-# ---- Find static dependencies ----
-find_package(fmt REQUIRED CONFIG)
-find_package(spdlog REQUIRED CONFIG)
-find_package(cxxopts REQUIRED CONFIG)
-find_package(nlohmann_json REQUIRED CONFIG)
+find_package(fmt REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(cxxopts REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 # ---- Add source files ----
 
@@ -46,7 +43,9 @@ file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
 
 # ---- Create library ----
-add_library(${PROJECT_NAME} STATIC ${headers} ${sources})
+# add_library(filestorm ${headers} ${sources}) Note: for header-only libraries change all PUBLIC
+# flags to INTERFACE and create an interface target: add_library(${PROJECT_NAME} INTERFACE)
+add_library(${PROJECT_NAME} ${headers} ${sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 
 # being a cross-platform target, we enforce standards conformance on MSVC
@@ -76,7 +75,7 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  # DEPENDENCIES "spdlog;fmt" CPACK YES
+  DEPENDENCIES "spdlog;fmt" CPACK YES
 )
 
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
@@ -93,7 +92,7 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
                                                   COMPONENT "${PROJECT_NAME}_Runtime"
 )
 
-# set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
+set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
 set(CPACK_RPM_BUILDREQUIRES
     "cmake, gcc-c++, spdlog-devel, fmt-devel, git, cxxopts-devel, json-devel"
 )
