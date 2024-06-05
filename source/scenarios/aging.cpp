@@ -38,6 +38,7 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("y", "sync", "Sync after each write", "false"));
   addParameter(Parameter("o", "direct_io", "Use direct IO", "false"));
   addParameter(Parameter("t", "time", "Max Time to run", "20m"));
+  addParameter(Parameter("", "create-dir", "If testing directory doesn't exists try to create it.", "false"));
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
   addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
 }
@@ -46,7 +47,11 @@ AgingScenario::~AgingScenario() {}
 
 void AgingScenario::run() {
   if (!std::filesystem::exists(getParameter("directory").get_string())) {
-    throw std::runtime_error(fmt::format("Directory {} does not exist!", getParameter("directory").get_string()));
+    if (getParameter("create-dir").get_bool()) {
+      std::filesystem::create_directories(getParameter("directory").get_string());
+    } else {
+      throw std::runtime_error(fmt::format("Directory {} does not exist!", getParameter("directory").get_string()));
+    }
   }
   if (!std::filesystem::is_directory(getParameter("directory").get_string())) {
     throw std::runtime_error(fmt::format("{} is not a directory!", getParameter("directory").get_string()));
