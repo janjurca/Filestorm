@@ -122,10 +122,14 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
                                                   COMPONENT "${PROJECT_NAME}_Runtime"
 )
 
-set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
-set(CPACK_RPM_BUILDREQUIRES
-    "cmake, gcc-c++, spdlog-devel, fmt-devel, git, cxxopts-devel, json-devel"
-)
+if(USE_CPM)
+  set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, git, cxxopts-devel")
+else()
+  set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, cxxopts, nlohmann_json")
+  set(CPACK_RPM_BUILDREQUIRES
+      "cmake, gcc-c++, spdlog-devel, fmt-devel, git, cxxopts-devel, json-devel"
+  )
+endif()
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
 
