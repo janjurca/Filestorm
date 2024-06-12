@@ -24,6 +24,8 @@ def fit_curve(x, y, degree=10):
 colors = ['Reds', 'Blues', 'Greens', 'Purples', 'Oranges', 'Greys']
 
 fig, axes = plt.subplots(len(args.operations), 1, figsize=(10, 6 * len(args.operations)))
+if not isinstance(axes, list):
+    axes = [axes]
 
 for i, file_path in enumerate(args.file):
     print(f">>>>>>>>>>>>>>>>> Processing {file_path}")
@@ -46,10 +48,14 @@ for i, file_path in enumerate(args.file):
             marker_color = operation_data["_file_extent_count"]
 
         axes[j].scatter(operation_data["iteration"], operation_data["speed_mbs"], s=marker_size, c=marker_color, cmap=colors[i], alpha=0.5, label=f"{file_path} - {operation}")
-        axes[j].set_xlabel('Time')
+        axes[j].set_xlabel('Iterations')
         axes[j].set_ylabel('Speed MB/s')
         axes[j].set_title(f'{operation} Speed Analysis')
         axes[j].legend()
+        # Add color bar
+        cbar = plt.colorbar(axes[j].scatter(operation_data["iteration"], operation_data["speed_mbs"], s=marker_size, c=marker_color, cmap=colors[i], alpha=0.5, label=f"{file_path} - {operation}"))
+        cbar.set_label('File Extent Count')
+
 
         # Fit curve for each operation
         polynomial = fit_curve(operation_data["iteration"], operation_data["speed_mbs"])

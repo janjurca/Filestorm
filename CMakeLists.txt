@@ -30,10 +30,36 @@ CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.11.1")
 # CPMAddPackage( NAME nlohmann_json GITHUB_REPOSITORY nlohmann/json VERSION 3.9.1 OPTIONS
 # "JSON_BuildTests OFF" )
 
-find_package(fmt REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(cxxopts REQUIRED)
-find_package(nlohmann_json REQUIRED)
+option(USE_CPM "Use CPM for dependencies" OFF)
+
+if(USE_CPM)
+  include(cmake/CPM.cmake)
+  CPMAddPackage(
+    NAME fmt
+    GITHUB_REPOSITORY fmtlib/fmt
+    VERSION 8.0.1
+  )
+  CPMAddPackage(
+    NAME spdlog
+    GITHUB_REPOSITORY gabime/spdlog
+    VERSION 1.9.2
+  )
+  CPMAddPackage(
+    NAME cxxopts
+    GITHUB_REPOSITORY jarro2783/cxxopts
+    VERSION 2.2.1
+  )
+  CPMAddPackage(
+    NAME nlohmann_json
+    GITHUB_REPOSITORY nlohmann/json
+    VERSION 3.10.4
+  )
+else()
+  find_package(fmt REQUIRED)
+  find_package(spdlog REQUIRED)
+  find_package(cxxopts REQUIRED)
+  find_package(nlohmann_json REQUIRED)
+endif()
 
 # ---- Add source files ----
 
