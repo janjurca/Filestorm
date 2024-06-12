@@ -34,25 +34,17 @@ option(USE_CPM "Use CPM for dependencies" OFF)
 
 if(USE_CPM)
   include(cmake/CPM.cmake)
-  CPMAddPackage(
-    NAME fmt
-    GITHUB_REPOSITORY fmtlib/fmt
-    VERSION 8.0.1
-  )
+  CPMAddPackage("gh:fmtlib/fmt#10.2.1")
+  CPMAddPackage("gh:nlohmann/json@3.10.5")
   CPMAddPackage(
     NAME spdlog
     GITHUB_REPOSITORY gabime/spdlog
-    VERSION 1.9.2
+    VERSION 1.14.1
   )
   CPMAddPackage(
     NAME cxxopts
     GITHUB_REPOSITORY jarro2783/cxxopts
     VERSION 2.2.1
-  )
-  CPMAddPackage(
-    NAME nlohmann_json
-    GITHUB_REPOSITORY nlohmann/json
-    VERSION 3.10.4
   )
 else()
   find_package(fmt REQUIRED)
@@ -112,6 +104,18 @@ set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPU
 target_link_libraries(
   ${PROJECT_NAME}Executable ${PROJECT_NAME} fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
 )
+
+if(USE_CPM)
+  install(
+    TARGETS fmt spdlog nlohmann_json
+    EXPORT ${PROJECT_NAME}Targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+endif()
 
 # Installation rules for the executable
 install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
