@@ -59,6 +59,8 @@ public:
         __VA_ARGS__;                     \
         logger->flush();                 \
         m_progress_bar->print_bar();     \
+      } else {                           \
+        __VA_ARGS__;                     \
       }                                  \
     } else {                             \
       __VA_ARGS__;                       \
@@ -88,6 +90,10 @@ public:
 
   void set_progress_bar(ProgressBar *progress_bar) {
     m_progress_bar = progress_bar;
+    if (!isatty(fileno(stdout))) {
+      m_progress_bar->disable();
+      warn("Progress bar disabled because stdout is not a tty");
+    }
     logger->flush();
   }
 };
