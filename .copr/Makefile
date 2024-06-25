@@ -11,7 +11,13 @@ srpm:
 	sed -i 's/cmake_minimum_required(VERSION 3.25)/cmake_minimum_required(VERSION 3.20)/g' $(CMAKELISTS_FILE)
 	make clean
 	mkdir -p build
+ifeq ($(wildcard USE_CPM),)
+	echo RUNNING without CPM; \
 	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+else
+	echo RUNNING with CPM; \
+	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DUSE_CPM=1
+endif
 	cpack -G RPM --config build/CPackSourceConfig.cmake
 	echo `ls`
 	for rpmfile in `ls filestorm-*.src.rpm`; do \
