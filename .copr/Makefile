@@ -3,6 +3,7 @@ CMAKELISTS_FILE := CMakeLists.txt
 srpm:
 	dnf -y install cmake gcc-c++ make spdlog-devel fmt-devel cxxopts-devel json-devel git
 	mkdir -p build
+	pwd
 	make
 	@VERSION_STRING=$$(cat build/.version); \
 	sed -i 's/\$${PROJECT_VERSION}/'$$VERSION_STRING'/g' $(CMAKELISTS_FILE); \
