@@ -90,7 +90,7 @@ public:
 
   void set_progress_bar(ProgressBar *progress_bar) {
     m_progress_bar = progress_bar;
-    if (!isatty(fileno(stdout))) {
+    if (!isatty(fileno(stdout)) && m_progress_bar != nullptr) {
       m_progress_bar->disable();
       warn("Progress bar disabled because stdout is not a tty");
     }
