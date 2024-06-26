@@ -80,4 +80,13 @@ jobs:
       - name: Trigger COPR build
         run: |
           curl -X POST -H 'Content-Type: application/json' ${{ secrets.COPR_WEBHOOK_URL }}
+  
+  trigger-copr-build-in-libs:
+    needs: [build, tests] 
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Trigger COPR build
+        run: |
+          curl -X POST -H 'Content-Type: application/json' ${{ secrets.COPR_WEBHOOK_URL_BUILDIN }}
       
