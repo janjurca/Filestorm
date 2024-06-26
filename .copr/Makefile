@@ -29,7 +29,7 @@ srpm:
 	$$CMAKE_COMMAND; \
 	cpack -G RPM --config $$BUILD_DIR/CPackSourceConfig.cmake; \
 	echo `ls $$BUILD_DIR`; \
-	for rpmfile in `ls $$BUILD_DIR/filestorm-*.src.rpm`; do \
+	for rpmfile in `ls $$CURRENT_DIR/filestorm-*.src.rpm`; do \
 		echo $$rpmfile; \
 		cp $$rpmfile $(outdir); \
 	done
