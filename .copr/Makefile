@@ -34,8 +34,8 @@ srpm:
 		RPM_FILE_NAME=$$(basename $$rpmfile); \
 		if echo $$CURRENT_DIR | grep -q $$SUBDIR; then \
 			RPM_FILE_NAME=$$(echo $$RPM_FILE_NAME | sed 's/filestorm-/filestorm-build-in-libs-/g'); \
-		fi \
-		cp $$CURRENT_DIR/$$rpmfile $(outdir)/$$RPM_FILE_NAME ; \
+		fi; \
+		cp $$CURRENT_DIR/$$rpmfile $(outdir)/$$RPM_FILE_NAME; \
 	done
 
 .PHONY: clean
