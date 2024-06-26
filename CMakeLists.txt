@@ -123,7 +123,7 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
 )
 
 if(USE_CPM)
-  set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, git, cxxopts-devel")
+  set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, git")
 else()
   set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, cxxopts, json-devel")
   set(CPACK_RPM_BUILDREQUIRES
