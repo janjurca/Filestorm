@@ -10,6 +10,7 @@ srpm:
 	BUILD_DIR=$$ROOT_DIR/build; \
 	if echo $$CURRENT_DIR | grep -q $$SUBDIR; then \
 		CMAKE_COMMAND="cmake -S $$ROOT_DIR -B $$BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DUSE_CPM=1"; \
+		sed -i 's/USE_CPM/1/g' $$ROOT_DIR/$(CMAKELISTS_FILE); \
 	else \
 		CMAKE_COMMAND="cmake -S $$ROOT_DIR -B $$BUILD_DIR -DCMAKE_BUILD_TYPE=Release"; \
 	fi; \
