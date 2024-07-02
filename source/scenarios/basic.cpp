@@ -1,7 +1,9 @@
 #include <filestorm/actions/actions.h>
 #include <filestorm/actions/rw_actions.h>
 #include <filestorm/data_sizes.h>
+#include <filestorm/result.h>
 #include <filestorm/scenarios/scenario.h>
+#include <filestorm/utils/logger.h>
 #include <spdlog/spdlog.h>
 
 BasicScenario::BasicScenario() {
@@ -24,17 +26,22 @@ void BasicScenario::run() {
   std::string operation = getParameter("operation").get_string();
   RWAction* action;
   std::function<void(VirtualMonitoredAction*)> log_func = [](VirtualMonitoredAction* action) {
+    BasicResult result;
     auto monitored_data = action->get_monitored_data();
     for (const auto& pair : monitored_data) {
       auto key = pair.first;
       if (monitored_data.at(key).size() < 2) {
         continue;
       }
+
       auto tuple = monitored_data.at(key).back();
       auto prev_tuple = monitored_data.at(key).at(monitored_data.at(key).size() - 2);
 
       auto duration = std::get<0>(tuple);
       auto value = std::get<1>(tuple);
+      result.setTimestamp(duration);
+      result.addResult(key, std::to_string(value));
+
       auto prev_duration = std::get<0>(prev_tuple);
       auto prev_value = std::get<1>(prev_tuple);
 
@@ -44,25 +51,32 @@ void BasicScenario::run() {
       auto speed = diff / duration_diff.count();     // bytes per nanosecond
       auto speed_mb_s = speed * 1000 * 1000 * 1000;  // bytes per second
       auto speed_mb = speed_mb_s / 1024 / 1024;      // megabytes per second
-      spdlog::info("Action: {} | Value: {} | Duration: {} | Speed: {} MB/s", key, prev_value, duration_diff.count(), speed_mb);
+      logger.info("Action: {} | Value: {} | Duration: {} | Speed: {} MB/s", key, prev_value, duration_diff.count(), speed_mb);
     }
+    result.commit();
   };
   if (operation == "read") {
-    spdlog::info("Read operation");
+    logger.info("Read operation");
     action = new ReadMonitoredAction(std::chrono::milliseconds(1000), log_func, attributes);
   } else if (operation == "write") {
-    spdlog::info("Write operation");
+    logger.info("Write operation");
     action = new WriteMonitoredAction(std::chrono::milliseconds(1000), log_func, attributes);
   } else if (operation == "randread") {
-    spdlog::info("Read-Write operation");
+    logger.info("Read-Write operation");
     action = new RandomReadMonitoredAction(std::chrono::milliseconds(1000), log_func, attributes);
   } else if (operation == "randwrite") {
-    spdlog::info("Read-Write operation");
+    logger.info("Read-Write operation");
     action = new RandomWriteMonitoredAction(std::chrono::milliseconds(1000), log_func, attributes);
   } else {
-    spdlog::error("Invalid operation");
+    logger.error("Invalid operation");
     return;
   }
   action->exec();
   delete action;
+}
+
+void BasicScenario::save() {
+  auto filename = getParameter("save-to").get_string();
+  logger.info("Saving Basic results to {}", filename);
+  BasicResult::save(filename);
 }

@@ -21,7 +21,7 @@ ReadMonitoredAction::ReadMonitoredAction(std::chrono::milliseconds monitoring_in
 }
 
 void ReadMonitoredAction::work() {
-  spdlog::debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());
+  logger.debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());
   int fd;
   std::unique_ptr<char[]> line(new char[get_block_size().convert<DataUnit::B>().get_value()]);
 
@@ -43,13 +43,13 @@ void ReadMonitoredAction::work() {
   if (fd == -1) {
     throw std::runtime_error(fmt::format("{}::work: error opening file: {}", typeid(*this).name(), strerror(errno)));
   }
-  spdlog::debug("{}::work: file_size: {}", typeid(*this).name(), get_file_size());
+  logger.debug("{}::work: file_size: {}", typeid(*this).name(), get_file_size());
 
   if (is_time_based()) {
     auto start_time = std::chrono::high_resolution_clock::now();
     auto now_time = std::chrono::high_resolution_clock::now();
-    spdlog::debug("{}::work: start_time: {}", typeid(*this).name(), start_time.time_since_epoch().count());
-    spdlog::debug("{}::work: interval: {}", typeid(*this).name(), std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count());
+    logger.debug("{}::work: start_time: {}", typeid(*this).name(), start_time.time_since_epoch().count());
+    logger.debug("{}::work: interval: {}", typeid(*this).name(), std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count());
 
     auto data = line.get();
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
@@ -78,7 +78,7 @@ void ReadMonitoredAction::prewrite() {
     throw std::runtime_error(fmt::format("{}::prewrite: error opening file: {}", typeid(*this).name(), strerror(errno)));
   }
   u_int64_t m_written_bytes = 0;
-  spdlog::debug("{}::prewrite: file_size: {}", typeid(*this).name(), get_file_size());
+  logger.debug("{}::prewrite: file_size: {}", typeid(*this).name(), get_file_size());
   u_int64_t file_size_bytes = get_file_size().convert<DataUnit::B>().get_value();
   size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
   std::unique_ptr<char[]> line(new char[get_block_size().convert<DataUnit::B>().get_value()]);
@@ -89,7 +89,7 @@ void ReadMonitoredAction::prewrite() {
   while (m_written_bytes < file_size_bytes) {
     m_written_bytes += write(fd, line.get(), block_size);
   }
-  spdlog::debug("{}::prewrite: written_bytes: {} DONE", typeid(*this).name(), m_written_bytes);
+  logger.debug("{}::prewrite: written_bytes: {} DONE", typeid(*this).name(), m_written_bytes);
   close(fd);
 }
 
@@ -121,7 +121,7 @@ inline off_t WriteMonitoredAction::get_offset() {
 
   offset += block_size_bytes;
   if (m_written_bytes % file_size_bytes == 0) {
-    spdlog::debug("{}::get_offset: resetting offset", typeid(*this).name());
+    logger.debug("{}::get_offset: resetting offset", typeid(*this).name());
     offset = 0;
   }
   return offset;
@@ -139,7 +139,7 @@ WriteMonitoredAction::WriteMonitoredAction(std::chrono::milliseconds monitoring_
     : RWAction(monitoring_interval, on_log, file_attributes) {}
 
 void WriteMonitoredAction::work() {
-  spdlog::debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());
+  logger.debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());
   int fd;
   std::unique_ptr<char[]> line(new char[get_block_size().convert<DataUnit::B>().get_value()]);
 
@@ -165,13 +165,13 @@ void WriteMonitoredAction::work() {
     throw std::runtime_error("WriteMonitoredAction::work: error opening file");
   }
 
-  spdlog::debug("{}::work: file_size: {}", typeid(*this).name(), get_file_size());
+  logger.debug("{}::work: file_size: {}", typeid(*this).name(), get_file_size());
   generate_random_chunk(line.get(), get_block_size().convert<DataUnit::B>().get_value());
   if (is_time_based()) {
     auto start_time = std::chrono::high_resolution_clock::now();
     auto now_time = std::chrono::high_resolution_clock::now();
-    spdlog::debug("{}::work: start_time: {}", typeid(*this).name(), start_time.time_since_epoch().count());
-    spdlog::debug("{}::work: interval: {}", typeid(*this).name(), std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count());
+    logger.debug("{}::work: start_time: {}", typeid(*this).name(), start_time.time_since_epoch().count());
+    logger.debug("{}::work: interval: {}", typeid(*this).name(), std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count());
 
     auto data = line.get();
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
