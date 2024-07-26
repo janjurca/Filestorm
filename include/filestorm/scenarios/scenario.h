@@ -72,6 +72,7 @@ public:
   BasicScenario();
   ~BasicScenario();
   void run() override;
+  void save() override;
 };
 
 class AgingScenario : public Scenario {
@@ -82,6 +83,8 @@ protected:
     ALTER,
     DELETE,
     CREATE_FILE,
+    CREATE_FILE_OVERWRITE,
+    CREATE_FILE_READ,
     CREATE_DIR,
     ALTER_SMALLER,
     ALTER_SMALLER_TRUNCATE,
@@ -94,6 +97,7 @@ protected:
   };
 
   void compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree);
+  int open_file(const char* path, int flags);
 
 public:
   AgingScenario();

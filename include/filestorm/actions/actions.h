@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filestorm/data_sizes.h>
+#include <filestorm/utils/logger.h>
 #include <spdlog/spdlog.h>
 
 #include <atomic>

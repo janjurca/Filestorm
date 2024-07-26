@@ -1,5 +1,6 @@
 #include <filestorm/result.h>
 #include <filestorm/scenarios/scenario.h>
+#include <filestorm/utils/logger.h>
 #include <fmt/format.h>
 
 #include <cxxopts.hpp>
@@ -7,7 +8,7 @@
 
 Scenario::Scenario() {
   addParameter(Parameter("h", "help", "Show help", "false", false));
-  addParameter(Parameter("", "save", "Save results to a file", "results.json", true));
+  addParameter(Parameter("", "save-to", "Save results to a file", "results.json", true));
 }
 
 Scenario::~Scenario() {}
@@ -35,7 +36,7 @@ void Scenario::setup(int argc, char** argv) {
   for (auto& parameter : _parameters) {
     if (result.count(parameter.long_name())) {
       std::string value = result[parameter.long_name()].as<std::string>();
-      spdlog::debug("Setting {} to {}", parameter.long_name(), value);
+      logger.debug("Setting {} to {}", parameter.long_name(), value);
       parameter.value(value);
     }
   }
@@ -44,8 +45,8 @@ void Scenario::setup(int argc, char** argv) {
 void Scenario::run() {}
 
 void Scenario::save() {
-  auto filename = getParameter("save").get_string();
-  spdlog::info("Saving results to {}", filename);
+  auto filename = getParameter("save-to").get_string();
+  logger.info("Saving results to {}", filename);
   Result::save(filename);
 }
 
