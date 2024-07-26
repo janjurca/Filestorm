@@ -164,7 +164,7 @@ template <DataUnit T> struct fmt::formatter<DataSize<T>> {
   }
 
   // This is where you define how to format DataSize
-  template <typename FormatContext> auto format(const DataSize<T> &size, FormatContext &ctx) -> decltype(ctx.out()) {
+  template <typename FormatContext> auto format(const DataSize<T> &size, FormatContext &ctx) const -> decltype(ctx.out()) {
     std::string unit;
     switch (T) {
       case DataUnit::B:
