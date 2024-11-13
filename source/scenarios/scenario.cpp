@@ -3,7 +3,7 @@
 #include <filestorm/utils/logger.h>
 #include <fmt/format.h>
 
-#include <cxxopts.hpp>
+#include <filestorm/cxxopts.hpp>
 #include <iostream>
 
 Scenario::Scenario() {

@@ -41,15 +41,9 @@ if(USE_CPM)
     GITHUB_REPOSITORY gabime/spdlog
     VERSION 1.14.1
   )
-  CPMAddPackage(
-    NAME cxxopts
-    GITHUB_REPOSITORY jarro2783/cxxopts
-    VERSION 2.2.1
-  )
 else()
   find_package(fmt REQUIRED)
   find_package(spdlog REQUIRED)
-  find_package(cxxopts REQUIRED)
   find_package(nlohmann_json REQUIRED)
 endif()
 
@@ -72,7 +66,7 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>
 # Link dependencies
 if(USE_CPM)
   target_link_libraries(
-    ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json cxxopts
+    ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
   )
 else()
   target_link_libraries(
@@ -112,7 +106,6 @@ set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPU
 if(USE_CPM)
   target_link_libraries(
     ${PROJECT_NAME}Executable ${PROJECT_NAME} fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
-    cxxopts
   )
 else()
   target_link_libraries(
@@ -140,10 +133,8 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
 if(USE_CPM)
   set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, git")
 else()
-  set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, cxxopts, json-devel")
-  set(CPACK_RPM_BUILDREQUIRES
-      "cmake, gcc-c++, spdlog-devel, fmt-devel, git, cxxopts-devel, json-devel"
-  )
+  set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, json-devel")
+  set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, git, json-devel")
 endif()
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
