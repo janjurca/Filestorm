@@ -30,10 +30,22 @@ CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.11.1")
 # CPMAddPackage( NAME nlohmann_json GITHUB_REPOSITORY nlohmann/json VERSION 3.9.1 OPTIONS
 # "JSON_BuildTests OFF" )
 
-find_package(fmt REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(cxxopts REQUIRED)
-find_package(nlohmann_json REQUIRED)
+option(USE_CPM "Use CPM for dependencies" OFF)
+
+if(USE_CPM)
+  include(cmake/CPM.cmake)
+  CPMAddPackage("gh:fmtlib/fmt#10.2.1")
+  CPMAddPackage("gh:nlohmann/json@3.10.5")
+  CPMAddPackage(
+    NAME spdlog
+    GITHUB_REPOSITORY gabime/spdlog
+    VERSION 1.14.1
+  )
+else()
+  find_package(fmt REQUIRED)
+  find_package(spdlog REQUIRED)
+  find_package(nlohmann_json REQUIRED)
+endif()
 
 # ---- Add source files ----
 
@@ -52,7 +64,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 # Link dependencies
-target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json)
+if(USE_CPM)
+  target_link_libraries(
+    ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
+  )
+else()
+  target_link_libraries(
+    ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
+  )
+endif()
 
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -83,20 +103,41 @@ file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/stand
 add_executable(${PROJECT_NAME}Executable ${standalone_sources})
 set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "filestorm")
 
-target_link_libraries(
-  ${PROJECT_NAME}Executable ${PROJECT_NAME} fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
-)
+if(USE_CPM)
+  target_link_libraries(
+    ${PROJECT_NAME}Executable ${PROJECT_NAME} fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
+  )
+else()
+  target_link_libraries(
+    ${PROJECT_NAME}Executable ${PROJECT_NAME} fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
+  )
+endif()
+
+if(USE_CPM)
+  install(
+    TARGETS fmt spdlog nlohmann_json
+    EXPORT ${PROJECT_NAME}Targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+endif()
 
 # Installation rules for the executable
 install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                                                   COMPONENT "${PROJECT_NAME}_Runtime"
 )
 
-set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
-set(CPACK_RPM_BUILDREQUIRES
-    "cmake, gcc-c++, spdlog-devel, fmt-devel, git, cxxopts-devel, json-devel"
-)
+if(USE_CPM)
+  set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, git")
+else()
+  set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, json-devel")
+  set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, git, json-devel")
+endif()
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
-
+set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 include(CPack)
