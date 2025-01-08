@@ -22,7 +22,8 @@ void displayHelp() {
   std::cout << "Options:\n"
             << "  -h, --help     Display this help message\n"
             << "  -v, --version  Display version information\n"
-            << "  -l, --log level     Set the log level (trace, debug, info, warn, error, critical, off)" << std::endl;
+            << "  -l, --log level     Set the log level (trace, debug, info, warn, error, critical, off) (default info)\n"
+            << "  -s, --seed seed     Set the seed for the random number generator (default 42)" << std::endl;
 }
 
 void displayVersion() { std::cout << FILESTORM_VERSION << std::endl; }
@@ -35,8 +36,10 @@ auto main(int argc, char** argv) -> int {
     displayHelp();
     return 1;
   }
+  srand(42);
 
-  const struct option long_options[] = {{"help", no_argument, NULL, 'h'}, {"version", no_argument, NULL, 'v'}, {"log", required_argument, NULL, 'l'}, {NULL, 0, NULL, 0}};
+  const struct option long_options[]
+      = {{"help", no_argument, NULL, 'h'}, {"version", no_argument, NULL, 'v'}, {"log", required_argument, NULL, 'l'}, {"seed", required_argument, NULL, 's'}, {NULL, 0, NULL, 0}};
   int opt;
   while ((opt = getopt_long(argc, argv, "+hvl:", long_options, NULL)) != -1) {
     switch (opt) {
@@ -51,6 +54,10 @@ auto main(int argc, char** argv) -> int {
       case 'l':
         // Set the log level
         spdlog::set_level(spdlog::level::from_str(optarg));
+        break;
+      case 's':
+        // Set the seed for the random number generator
+        srand(atoi(optarg));
         break;
       case '?':
         // Handle unknown options or missing arguments
