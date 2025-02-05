@@ -51,7 +51,7 @@ public:
 
     int getFallocationCount() { return fallocated_count; }
 
-    int getExtentsCount(bool update = true) {
+    std::vector<extents> getExtents(bool update = true) {
       if (update) {
         if (type == Type::FILE) {
           _extents.clear();
@@ -63,12 +63,12 @@ public:
           _extents.clear();
         }
       }
-      return _extents.size();
+      return _extents;
     }
 
     std::uintmax_t size() { return fs_utils::file_size(path(true)); }
 
-    std::tuple<size_t, size_t> getHoleAdress(size_t blocksize, bool increment) {
+    std::tuple<size_t, size_t> getHoleAddress(size_t blocksize, bool increment) {
       size_t start = 0, end = size() / 2;
       for (int i = 0; i < fallocated_count; i++) {
         size_t length = end - start;
@@ -90,7 +90,7 @@ public:
 
     bool isPunchable(size_t blocksize) {
       try {
-        getHoleAdress(blocksize, false);
+        getHoleAddress(blocksize, false);
         return true;
       } catch (const std::exception& e) {
         return false;

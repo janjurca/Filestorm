@@ -9,7 +9,8 @@
 #include <filestorm/utils/logger.h>
 #include <fmt/format.h>
 #include <sys/stat.h>  // for S_IRWXU
-#include <unistd.h>    // for close
+#include <sys/types.h>
+#include <unistd.h>  // for close
 
 #include <algorithm>
 #include <cerrno>  // for errno
@@ -17,6 +18,7 @@
 #include <cstring>  // for strerror
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <iostream>  // for std::cerr
 #include <memory>    // for std::unique_ptr
 #include <random>
@@ -38,6 +40,10 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("y", "sync", "Sync after each write", "false"));
   addParameter(Parameter("o", "direct_io", "Use direct IO", "false"));
   addParameter(Parameter("t", "time", "Time to run", "2h"));
+  addParameter(Parameter("", "rapid-aging",
+                         "The testing will try to age the filesystem at first by only allocating files without data writes in order to get the aged state much faster than the using normal aging "
+                         "process. downside of this is that you wont get the data performance for the for the initial aging stage.",
+                         "false"));
   addParameter(Parameter("", "create-dir", "If testing directory doesn't exists try to create it.", "false"));
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
   addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
@@ -60,13 +66,15 @@ void AgingScenario::run() {
     logger.warn("Directory {} is not empty!", getParameter("directory").get_string());
     throw std::runtime_error(fmt::format("{} is not empty!", getParameter("directory").get_string()));
   }
-
+  rapid = getParameter("rapid-aging").get_bool();
   FileTree tree(getParameter("directory").get_string(), getParameter("depth").get_int());
   std::map<std::string, Transition> transtions;
   transtions.emplace("S->CREATE", Transition(S, CREATE, "pC"));
   transtions.emplace("S->ALTER", Transition(S, ALTER, "pA"));
   transtions.emplace("S->DELETE", Transition(S, DELETE, "pD"));
   transtions.emplace("CREATE->CREATE_FILE", Transition(CREATE, CREATE_FILE, "pCF"));
+  transtions.emplace("CREATE->CREATE_FILE_FALLOCATE", Transition(CREATE, CREATE_FILE_FALLOCATE, "pCFR"));
+  transtions.emplace("CREATE_FILE_FALLOCATE->END", Transition(CREATE_FILE_FALLOCATE, END, "p1"));
   transtions.emplace("CREATE->CREATE_DIR", Transition(CREATE, CREATE_DIR, "pCD"));
   transtions.emplace("ALTER->ALTER_SMALLER", Transition(ALTER, ALTER_SMALLER, "pAS"));
   transtions.emplace("ALTER->ALTER_BIGGER", Transition(ALTER, ALTER_BIGGER, "pAB"));
@@ -151,6 +159,38 @@ void AgingScenario::run() {
 
         result.setAction(Result::Action::CREATE_FILE);
         result.setOperation(Result::Operation::WRITE);
+        result.setPath(file_node->path(true));
+        result.setSize(file_size);
+        result.setDuration(duration);
+        break;
+      }
+      case CREATE_FILE_FALLOCATE: {
+        FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
+        logger.debug(fmt::format("CREATE_FILE_FALLOCATE {}", file_node->path(true)));
+        DataSize<DataUnit::B> file_size = get_file_size();
+
+        int fd = open_file(file_node->path(true).c_str(), O_RDWR | O_CREAT);
+        MeasuredCBAction action([&]() {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#  error "Windows is not supported"
+#elif __APPLE__
+          if (ftruncate(fd, file_size.get_value()) == -1) {
+            throw std::runtime_error(fmt::format("ftruncate failed: {}", strerror(errno)));
+          }
+#elif defined(__linux__)
+          if (fallocate(fd, 0, 0, file_size.get_value()) == -1) {
+            throw std::runtime_error(fmt::format("Fallocate failed: {}", strerror(errno)));
+          }
+#endif
+        });
+        auto duration = action.exec();
+        close(fd);
+        logger.debug(fmt::format("CREATE_FILE_FALLOCATE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
+                                 (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+        touched_files.push_back(file_node);
+
+        result.setAction(Result::Action::CREATE_FILE_FALLOCATE);
+        result.setOperation(Result::Operation::FALLOCATE);
         result.setPath(file_node->path(true));
         result.setSize(file_size);
         result.setDuration(duration);
@@ -263,7 +303,7 @@ void AgingScenario::run() {
         auto random_file = tree.randomPunchableFile();
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
-        std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
+        std::tuple<size_t, size_t> hole_adress = random_file->getHoleAddress(block_size, true);
         // Round to modulo blocksize
         logger.debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_adress), std::get<1>(hole_adress));
         MeasuredCBAction action([&]() {
@@ -332,7 +372,7 @@ void AgingScenario::run() {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         logger.debug("DELETE_FILE {}", random_file_path);
-        auto file_extents = random_file->getExtentsCount(true);
+        auto file_extents = random_file->getExtents(true).size();
 
         MeasuredCBAction action([&]() { std::filesystem::remove(random_file_path); });
         action.exec();
@@ -357,15 +397,27 @@ void AgingScenario::run() {
           sync();
         }
         for (auto& file : touched_files) {
-          auto original_extents = file->getExtentsCount(false);
-          auto updated_extents = file->getExtentsCount(true);
-          logger.debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents);
-          tree.total_extents_count += updated_extents - original_extents;
+          auto original_extents = file->getExtents(false).size();
+          auto updated_extents = file->getExtents(true);
+          int updated_extents_size = updated_extents.size();
+
+          logger.debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents_size);
+          tree.total_extents_count += updated_extents_size - original_extents;
           if (!file->isPunchable(get_block_size().convert<DataUnit::B>().get_value())) {
             tree.removeFromPunchableFiles(file);
           }
           if (file->path(true) == result.getPath()) {
-            result.setFileExtentCount(updated_extents);
+            result.setFileExtentCount(updated_extents_size);
+          }
+          if (result.getAction() == Result::Action::CREATE_FILE || result.getAction() == Result::Action::CREATE_FILE_FALLOCATE || result.getAction() == Result::Action::CREATE_FILE_OVERWRITE
+              || result.getAction() == Result::Action::CREATE_FILE_READ) {
+            last_created_extents.push_front(std::vector<extents>(updated_extents_size));
+            for (auto& extent : updated_extents) {
+              last_created_extents.front().push_back(extent);
+            }
+            if (last_created_extents.size() > 10) {
+              last_created_extents.pop_back();
+            }
           }
         }
         logger.debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
@@ -393,7 +445,7 @@ void AgingScenario::run() {
   int total_extents = 0;
   for (auto& file : tree.all_files) {
     file_count++;
-    total_extents += file->getExtentsCount();
+    total_extents += file->getExtents().size();
   }
   logger.info("File count: {}, total extents: {}", file_count, total_extents);
   logger.set_progress_bar(nullptr);
@@ -439,7 +491,12 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pDD"] = 0.01;
   probabilities["pDF"] = 1 - probabilities["pDD"];
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
-  probabilities["pCD"] = 1 - probabilities["pCF"];
+  probabilities["pCFR"] = 0;
+  if (rapid) {
+    probabilities["pCFR"] = probabilities["pCF"];
+    probabilities["pCf"] = 0;
+  }
+  probabilities["pCFR"] = probabilities["pCD"] = 1 - probabilities["pCF"];
   probabilities["pCFO"] = 0.3;
   probabilities["pCFR"] = 0.3;
   probabilities["pCFE"] = 1 - probabilities["pCFO"] - probabilities["pCFR"];

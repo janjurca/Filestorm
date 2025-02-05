@@ -12,8 +12,8 @@
 
 class Result {
 public:
-  enum Action { DELETE_FILE, CREATE_FILE, CREATE_FILE_OVERWRITE, CREATE_FILE_READ, CREATE_DIR, ALTER_SMALLER_TRUNCATE, ALTER_SMALLER_FALLOCATE, ALTER_BIGGER, NONE };
-  enum Operation { WRITE, TRIM, OVERWRITE, READ };
+  enum Action { DELETE_FILE, CREATE_FILE, CREATE_FILE_FALLOCATE, CREATE_FILE_OVERWRITE, CREATE_FILE_READ, CREATE_DIR, ALTER_SMALLER_TRUNCATE, ALTER_SMALLER_FALLOCATE, ALTER_BIGGER, NONE };
+  enum Operation { WRITE, TRIM, OVERWRITE, READ, FALLOCATE };
   static std::vector<Result> results;
 
 private:
@@ -58,6 +58,8 @@ public:
         return "DELETE_FILE";
       case CREATE_FILE:
         return "CREATE_FILE";
+      case CREATE_FILE_FALLOCATE:
+        return "CREATE_FILE_FALLOCATE";
       case CREATE_DIR:
         return "CREATE_DIR";
       case CREATE_FILE_OVERWRITE:
@@ -87,6 +89,8 @@ public:
         return "OVERWRITE";
       case READ:
         return "READ";
+      case FALLOCATE:
+        return "FALLOCATE";
       default:
         throw std::runtime_error("Unknown Operation");
     }
