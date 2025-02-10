@@ -88,7 +88,8 @@ public:
       case READ:
         return "READ";
       default:
-        throw std::runtime_error("Unknown Operation");
+        logger.debug("Unknown Operation id {}", operation);
+        return "Unknown Operation";
     }
   }
 
