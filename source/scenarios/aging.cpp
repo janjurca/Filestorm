@@ -236,7 +236,7 @@ void AgingScenario::run() {
         auto actual_file_size = fs_utils::file_size(random_file_path);
         // auto new_file_size = get_file_size(0, actual_file_size, false);
         std::uintmax_t blocksize = get_block_size().convert<DataUnit::B>().get_value();
-        auto new_file_size = get_file_size(std::max(actual_file_size / 2, 10 * blocksize), actual_file_size, false);
+        auto new_file_size = get_file_size(std::max(actual_file_size / 2, blocksize), actual_file_size, false);  // TODO check this for error, remove the magic constant
         logger.debug("ALTER_SMALLER_TRUNCATE {} from {} kB to {} kB ({})", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024, new_file_size.get_value());
         bool fallocatable = random_file->isPunchable(blocksize);
         random_file->truncate(blocksize, new_file_size.get_value());
@@ -460,6 +460,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
 }
 
 DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t range_to, bool safe) {
+  logger.debug("get_file_size({},{},{})", range_from, range_to, safe);
   std::random_device rand_dev;
   std::mt19937 generator(rand_dev());
   DataSize<DataUnit::B> return_size(0);
