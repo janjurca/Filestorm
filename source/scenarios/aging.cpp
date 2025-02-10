@@ -28,7 +28,6 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("d", "directory", "", "/tmp/filestorm/"));
   addParameter(Parameter("r", "depth", "Max directory depth", "5"));
   addParameter(Parameter("n", "ndirs", "Max number of dirs", "200"));
-  addParameter(Parameter("f", "nfiles", "Max number of files", "2000"));
   addParameter(Parameter("m", "fs-capacity", "Max overall filesystem size", "full"));  // TODO: add support for this
   addParameter(Parameter("S", "maxfsize", "Max file size", "1G"));
   addParameter(Parameter("s", "minfsize", "Min file size", "10KB"));
@@ -439,7 +438,6 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pDD"] = 0.01;
   probabilities["pDF"] = 1 - probabilities["pDD"];
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
-  probabilities["pCD"] = 1 - probabilities["pCF"];
   probabilities["pCFO"] = 0.3;
   probabilities["pCFR"] = 0.3;
   probabilities["pCFE"] = 1 - probabilities["pCFO"] - probabilities["pCFR"];
