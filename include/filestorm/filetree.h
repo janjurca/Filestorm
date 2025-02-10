@@ -66,6 +66,8 @@ public:
       return _extents;
     }
 
+    int getExtentsCount(bool update = true) { return getExtents(update).size(); }
+
     std::uintmax_t size() { return fs_utils::file_size(path(true)); }
 
     std::tuple<size_t, size_t> getHoleAddress(size_t blocksize, bool increment) {

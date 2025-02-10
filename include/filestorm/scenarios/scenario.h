@@ -25,7 +25,7 @@ public:
   ~Parameter() {};
   std::string short_name() const { return _short_name; };
   std::string long_name() const { return _long_name; };
-  std::string description() const { return _description; };
+  std::string description() const { return fmt::format("{} (default: {})", _description, _value); };
   std::string value() const { return _value; };
   std::string value(const std::string& value) {
     if (_on_set != nullptr) {
