@@ -484,6 +484,7 @@ DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t
       return_size = DataSize<DataUnit::B>(return_size.get_value() - (return_size.get_value() % block_size));
     }
   }
+  logger.debug("Return get_file_size = {}", return_size);
   return return_size;
 }
 
