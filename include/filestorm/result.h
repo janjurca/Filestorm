@@ -92,7 +92,8 @@ public:
       case FALLOCATE:
         return "FALLOCATE";
       default:
-        throw std::runtime_error("Unknown Operation");
+        logger.debug("Unknown Operation id {}", (int)operation);
+        return "Unknown Operation";
     }
   }
 

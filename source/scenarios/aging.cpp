@@ -30,7 +30,6 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("d", "directory", "", "/tmp/filestorm/"));
   addParameter(Parameter("r", "depth", "Max directory depth", "5"));
   addParameter(Parameter("n", "ndirs", "Max number of dirs", "200"));
-  addParameter(Parameter("f", "nfiles", "Max number of files", "2000"));
   addParameter(Parameter("m", "fs-capacity", "Max overall filesystem size", "full"));  // TODO: add support for this
   addParameter(Parameter("S", "maxfsize", "Max file size", "1G"));
   addParameter(Parameter("s", "minfsize", "Min file size", "10KB"));
@@ -276,7 +275,7 @@ void AgingScenario::run() {
         auto actual_file_size = fs_utils::file_size(random_file_path);
         // auto new_file_size = get_file_size(0, actual_file_size, false);
         std::uintmax_t blocksize = get_block_size().convert<DataUnit::B>().get_value();
-        auto new_file_size = get_file_size(std::max(actual_file_size / 2, 10 * blocksize), actual_file_size, false);
+        auto new_file_size = get_file_size(std::max(actual_file_size / 2, blocksize), actual_file_size, false);  // TODO check this for error, remove the magic constant
         logger.debug("ALTER_SMALLER_TRUNCATE {} from {} kB to {} kB ({})", random_file_path, actual_file_size / 1024, new_file_size.get_value() / 1024, new_file_size.get_value());
         bool fallocatable = random_file->isPunchable(blocksize);
         random_file->truncate(blocksize, new_file_size.get_value());
@@ -470,7 +469,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   }
 
   double caf = CAF((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity)));
-  caf = ceilTo(caf, 3);
+  caf = floorTo(caf, 3);
   probabilities["pC"] = caf;
   probabilities["pD"] = 0.1 * (1.0 - caf);
   probabilities["pA"] = 1 - caf - probabilities["pD"];
@@ -517,6 +516,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
 }
 
 DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t range_to, bool safe) {
+  logger.debug("get_file_size({},{},{})", range_from, range_to, safe);
   std::random_device rand_dev;
   std::mt19937 generator(rand_dev());
   DataSize<DataUnit::B> return_size(0);
@@ -540,6 +540,7 @@ DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t
       return_size = DataSize<DataUnit::B>(return_size.get_value() - (return_size.get_value() % block_size));
     }
   }
+  logger.debug("Return get_file_size = {}", return_size);
   return return_size;
 }
 
