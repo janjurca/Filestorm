@@ -88,7 +88,7 @@ public:
       case READ:
         return "READ";
       default:
-        logger.debug("Unknown Operation id {}", operation);
+        logger.debug("Unknown Operation id {}", (int)operation);
         return "Unknown Operation";
     }
   }
