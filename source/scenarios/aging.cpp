@@ -418,7 +418,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   }
 
   double caf = CAF((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity)));
-  caf = ceilTo(caf, 3);
+  caf = floorTo(caf, 3);
   probabilities["pC"] = caf;
   probabilities["pD"] = 0.1 * (1.0 - caf);
   probabilities["pA"] = 1 - caf - probabilities["pD"];

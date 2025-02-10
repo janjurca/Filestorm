@@ -67,6 +67,11 @@ double ceilTo(double value, int decimals) {
   return std::ceil(value * factor) / factor;
 }
 
+double floorTo(double value, int decimals) {
+  double factor = std::pow(10, decimals);
+  return std::floor(value * factor) / factor;
+}
+
 std::chrono::seconds stringToChrono(const std::string& timeString) {
   char unit = timeString.back();                                         // Get the last character as unit
   std::string numberPart = timeString.substr(0, timeString.size() - 1);  // Extract numeric part
