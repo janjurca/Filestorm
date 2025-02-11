@@ -10,7 +10,7 @@ int main() {
     auto start = high_resolution_clock::now();
 
     // Replace "C:" with the drive or path you want to check
-    fs::space_info spaceInfo = fs::space("/Users/jjurca/Nextcloud");
+    fs::space_info spaceInfo = fs::space("/home");
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
