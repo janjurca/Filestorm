@@ -408,16 +408,6 @@ void AgingScenario::run() {
           if (file->path(true) == result.getPath()) {
             result.setFileExtentCount(updated_extents_size);
           }
-          if (result.getAction() == Result::Action::CREATE_FILE || result.getAction() == Result::Action::CREATE_FILE_FALLOCATE || result.getAction() == Result::Action::CREATE_FILE_OVERWRITE
-              || result.getAction() == Result::Action::CREATE_FILE_READ) {
-            last_created_extents.push_front(std::vector<extents>(updated_extents_size));
-            for (auto& extent : updated_extents) {
-              last_created_extents.front().push_back(extent);
-            }
-            if (last_created_extents.size() > 10) {
-              last_created_extents.pop_back();
-            }
-          }
         }
         logger.debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
                      fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
