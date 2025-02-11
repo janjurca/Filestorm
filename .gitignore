@@ -4,3 +4,4 @@
 .DS_Store
 .version
 _CPack_Packages
+results.json*

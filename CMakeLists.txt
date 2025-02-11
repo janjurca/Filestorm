@@ -45,6 +45,7 @@ else()
   find_package(fmt REQUIRED)
   find_package(spdlog REQUIRED)
   find_package(nlohmann_json REQUIRED)
+  find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 endif()
 
 # ---- Add source files ----
@@ -66,11 +67,11 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>
 # Link dependencies
 if(USE_CPM)
   target_link_libraries(
-    ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
+    ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json Eigen3::Eigen
   )
 else()
   target_link_libraries(
-    ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
+    ${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json Eigen3::Eigen
   )
 endif()
 
@@ -95,7 +96,7 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "spdlog;fmt" CPACK YES
+  DEPENDENCIES "spdlog;fmt;eigen3" CPACK YES
 )
 
 file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
@@ -106,10 +107,12 @@ set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPU
 if(USE_CPM)
   target_link_libraries(
     ${PROJECT_NAME}Executable ${PROJECT_NAME} fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
+    Eigen3::Eigen
   )
 else()
   target_link_libraries(
     ${PROJECT_NAME}Executable ${PROJECT_NAME} fmt::fmt spdlog::spdlog nlohmann_json::nlohmann_json
+    Eigen3::Eigen
   )
 endif()
 
@@ -133,8 +136,10 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
 if(USE_CPM)
   set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, git")
 else()
-  set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, json-devel")
-  set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, spdlog-devel, fmt-devel, git, json-devel")
+  set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, json-devel, eigen3")
+  set(CPACK_RPM_BUILDREQUIRES
+      "cmake, gcc-c++, spdlog-devel, fmt-devel, git, json-devel, eigen3-devel"
+  )
 endif()
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
