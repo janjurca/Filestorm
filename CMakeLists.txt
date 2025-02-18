@@ -41,6 +41,11 @@ if(USE_CPM)
     GITHUB_REPOSITORY gabime/spdlog
     VERSION 1.14.1
   )
+  CPMAddPackage(
+    NAME Eigen3
+    GIT_REPOSITORY "https://gitlab.com/libeigen/eigen"
+    GIT_TAG "3.3.3" TRUE
+  )
 else()
   find_package(fmt REQUIRED)
   find_package(spdlog REQUIRED)
