@@ -77,7 +77,7 @@ void AgingScenario::run() {
   transtions.emplace("S->ALTER", Transition(S, ALTER, "pA"));
   transtions.emplace("S->DELETE", Transition(S, DELETE, "pD"));
   transtions.emplace("CREATE->CREATE_FILE", Transition(CREATE, CREATE_FILE, "pCF"));
-  transtions.emplace("CREATE->CREATE_FILE_FALLOCATE", Transition(CREATE, CREATE_FILE_FALLOCATE, "pCFR"));
+  transtions.emplace("CREATE->CREATE_FILE_FALLOCATE", Transition(CREATE, CREATE_FILE_FALLOCATE, "pCFF"));
   transtions.emplace("CREATE_FILE_FALLOCATE->END", Transition(CREATE_FILE_FALLOCATE, END, "p1"));
   transtions.emplace("CREATE->CREATE_DIR", Transition(CREATE, CREATE_DIR, "pCD"));
   transtions.emplace("ALTER->ALTER_SMALLER", Transition(ALTER, ALTER_SMALLER, "pAS"));
@@ -488,10 +488,10 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pDD"] = 0.01;
   probabilities["pDF"] = 1 - probabilities["pDD"];
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
-  probabilities["pCFR"] = 0;
+  probabilities["pCFF"] = 0;
   if (rapid_aging) {
-    probabilities["pCFR"] = probabilities["pCF"];
-    probabilities["pCf"] = 0;
+    probabilities["pCFF"] = probabilities["pCF"];
+    probabilities["pCF"] = 0;
     if (curve.getPointCount() > 100) {
       curve.fitPolyCurve();
       if (curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
@@ -500,7 +500,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
       }
     }
   }
-  probabilities["pCFR"] = probabilities["pCD"] = 1 - probabilities["pCF"];
+  probabilities["pCD"] = 1 - probabilities["pCF"] - probabilities["pCFF"];
   probabilities["pCFO"] = 0.3;
   probabilities["pCFR"] = 0.3;
   probabilities["pCFE"] = 1 - probabilities["pCFO"] - probabilities["pCFR"];
