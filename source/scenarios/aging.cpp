@@ -428,9 +428,6 @@ void AgingScenario::run() {
         iteration++;
         bar.set_meta("extents", fmt::format("{}", tree.total_extents_count));
         bar.set_meta("f-count", fmt::format("{}", tree.all_files.size()));
-        if (extents_curve.isFitted()) {
-          bar.set_meta("slope", fmt::format("{}", extents_curve.slopeAngle()));
-        }
         bar.update(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start));
         extents_curve.addPoint(tree.total_extents_count);
         break;
@@ -497,6 +494,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
     probabilities["pCF"] = 0;
     if (curve.getPointCount() > 100) {
       curve.fitPolyCurve();
+      logger.debug("Extents curve angle: {}", curve.slopeAngle());
       if (curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
         rapid_aging = false;
         logger.debug("Rapid aging - disabling");
