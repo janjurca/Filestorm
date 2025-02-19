@@ -4,6 +4,7 @@
 #include <filestorm/data_sizes.h>
 #include <filestorm/filefrag.h>
 #include <filestorm/filetree.h>
+#include <filestorm/polycurve.h>
 #include <filestorm/utils/psm.h>
 
 #include <list>
@@ -100,7 +101,7 @@ protected:
   };
 
   bool rapid = false;
-  void compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree);
+  void compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree, PolyCurve& curve);
   int open_file(const char* path, int flags);
 
 public:

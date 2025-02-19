@@ -43,6 +43,8 @@ AgingScenario::AgingScenario() {
                          "The testing will try to age the filesystem at first by only allocating files without data writes in order to get the aged state much faster than the using normal aging "
                          "process. downside of this is that you wont get the data performance for the for the initial aging stage.",
                          "false"));
+  addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "28"));
+
   addParameter(Parameter("", "create-dir", "If testing directory doesn't exists try to create it.", "false"));
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
   addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
@@ -119,10 +121,12 @@ void AgingScenario::run() {
   }
   logger.set_progress_bar(&bar);
 
+  PolyCurve extents_curve(1, 100);
+
   while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
          && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
     result.setIteration(iteration);
-    compute_probabilities(probabilities, tree);
+    compute_probabilities(probabilities, tree, extents_curve);
     psm.performTransition(probabilities);
     switch (psm.getCurrentState()) {
       case S:
@@ -415,6 +419,7 @@ void AgingScenario::run() {
         result.setExtentsCount(tree.total_extents_count);
         result.commit();
         result = Result();
+        extents_curve.addPoint(tree.total_extents_count);
         if (tree.findNullPointer()) {
           throw std::runtime_error("Null pointer found");
         }
@@ -445,7 +450,7 @@ void AgingScenario::run() {
   tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Nodeptr dir) { std::filesystem::remove(dir->path(true)); });
 }
 
-void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree) {
+void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree, PolyCurve& curve) {
   probabilities.clear();
   auto fs_status = fs_utils::get_fs_status(getParameter("directory").get_string());
 
@@ -484,6 +489,13 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   if (rapid) {
     probabilities["pCFR"] = probabilities["pCF"];
     probabilities["pCf"] = 0;
+    if (curve.getPointCount() > 100) {
+      curve.fitPolyCurve();
+      if (curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
+        rapid = false;
+        logger.debug("Rapid aging - disabling");
+      }
+    }
   }
   probabilities["pCFR"] = probabilities["pCD"] = 1 - probabilities["pCF"];
   probabilities["pCFO"] = 0.3;
