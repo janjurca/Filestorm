@@ -50,7 +50,7 @@ else()
   find_package(fmt REQUIRED)
   find_package(spdlog REQUIRED)
   find_package(nlohmann_json REQUIRED)
-  find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+  find_package(Eigen3 REQUIRED)
 endif()
 
 # ---- Add source files ----
