@@ -124,7 +124,7 @@ void AgingScenario::run() {
   }
   logger.set_progress_bar(&bar);
 
-  PolyCurve extents_curve(1, 100);
+  PolyCurve extents_curve(1, 10);
 
   while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
          && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
@@ -492,7 +492,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   if (rapid_aging) {
     probabilities["pCFF"] = probabilities["pCF"];
     probabilities["pCF"] = 0;
-    if (curve.getPointCount() > 100) {
+    if (curve.getPointCount() > 10) {
       curve.fitPolyCurve();
       logger.debug("Extents curve angle: {}", curve.slopeAngle());
       if (curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
