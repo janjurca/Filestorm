@@ -22,7 +22,6 @@ CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
 
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
-find_package(cxxopts REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(Eigen3 REQUIRED)
 
