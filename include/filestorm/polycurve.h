@@ -54,6 +54,8 @@ public:
 
   float slopeAngle() const;
 
+  bool isFitted() const { return fitted; };
+
 private:
   // Main data storage for points that will be used for fitting.
   std::vector<float> y_points;
