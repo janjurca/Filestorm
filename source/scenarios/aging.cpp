@@ -67,7 +67,10 @@ void AgingScenario::run() {
     logger.warn("Directory {} is not empty!", getParameter("directory").get_string());
     throw std::runtime_error(fmt::format("{} is not empty!", getParameter("directory").get_string()));
   }
-  rapid = getParameter("rapid-aging").get_bool();
+  rapid_aging = getParameter("rapid-aging").get_bool();
+
+  logger.debug("Rapid aging is: {}", rapid_aging);
+
   FileTree tree(getParameter("directory").get_string(), getParameter("depth").get_int());
   std::map<std::string, Transition> transtions;
   transtions.emplace("S->CREATE", Transition(S, CREATE, "pC"));
@@ -486,13 +489,13 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pDF"] = 1 - probabilities["pDD"];
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
   probabilities["pCFR"] = 0;
-  if (rapid) {
+  if (rapid_aging) {
     probabilities["pCFR"] = probabilities["pCF"];
     probabilities["pCf"] = 0;
     if (curve.getPointCount() > 100) {
       curve.fitPolyCurve();
       if (curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
-        rapid = false;
+        rapid_aging = false;
         logger.debug("Rapid aging - disabling");
       }
     }
