@@ -17,7 +17,7 @@ srpm:
 	echo "Root directory: $$ROOT_DIR"; \
 	echo "Build directory: $$BUILD_DIR"; \
 	echo "CMake command: $$CMAKE_COMMAND"; \
-	dnf -y install cmake gcc-c++ make spdlog-devel fmt-devel cxxopts-devel json-devel; \
+	dnf -y install cmake gcc-c++ make spdlog-devel fmt-devel cxxopts-devel json-devel eigen3-devel; \
 	mkdir -p $$BUILD_DIR; \
 	make -C $$ROOT_DIR; \
 	VERSION_STRING=$$(cat $$BUILD_DIR/.version); \
