@@ -43,11 +43,15 @@ AgingScenario::AgingScenario() {
                          "The testing will try to age the filesystem at first by only allocating files without data writes in order to get the aged state much faster than the using normal aging "
                          "process. downside of this is that you wont get the data performance for the for the initial aging stage.",
                          "false"));
-  addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "28"));
 
   addParameter(Parameter("", "create-dir", "If testing directory doesn't exists try to create it.", "false"));
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
   addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
+  addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "28"));
+  addParameter(Parameter("", "settings-safe-margin",
+                         "When new file is computed and there is not enough space the new file size is shrinked to available size but in some cases the fs has a file size overhead because of "
+                         "metadata writes which are hard to predict and compute. So the safe margin is introduced which specify what is a minimal space amount that should be left available",
+                         "1MB"));
 }
 
 AgingScenario::~AgingScenario() {}
@@ -418,7 +422,6 @@ void AgingScenario::run() {
         }
         logger.debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
                      fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
-        touched_files.clear();
         result.setExtentsCount(tree.total_extents_count);
         result.commit();
         result = Result();
@@ -428,8 +431,14 @@ void AgingScenario::run() {
         iteration++;
         bar.set_meta("extents", fmt::format("{}", tree.total_extents_count));
         bar.set_meta("f-count", fmt::format("{}", tree.all_files.size()));
+        if (extents_curve.isFitted()) {
+          bar.set_meta("slope", fmt::format("{}", extents_curve.slopeAngle()));
+        }
         bar.update(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start));
-        extents_curve.addPoint(tree.total_extents_count);
+        if (touched_files.size() > 0) {
+          extents_curve.addPoint(tree.total_extents_count);
+        }
+        touched_files.clear();
         break;
       default:
         break;
@@ -462,7 +471,9 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   // logger.debug("CAF input: {}", ((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity))));
 
   // Handle case when available space is less than block size. If this happens, we can't write any more data. Even thought the drive isnt completely full.
-  if (fs_status.available <= get_block_size().convert<DataUnit::B>().get_value() * 3) {
+  auto safe_margin = DataSize<DataUnit::B>::fromString(getParameter("settings-safe-margin").get_string());
+
+  if (fs_status.available <= safe_margin.get_value()) {
     fs_status.available = 0;
   }
 
@@ -526,26 +537,36 @@ DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t
   std::random_device rand_dev;
   std::mt19937 generator(rand_dev());
   DataSize<DataUnit::B> return_size(0);
+
   if (getParameter("sdist").get_string() == "uniform") {
     std::uniform_int_distribution<uint64_t> distr(range_from, range_to);
     auto d = distr(generator);
     return_size = DataSize<DataUnit::B>(d);
   } else if (getParameter("sdist").get_string() == "normal") {
-    double mean = range_to / 2;
-    double stddev = mean / 2;
+    double mean = range_to / 2.0;
+    double stddev = mean / 2.0;
     std::normal_distribution<double> distr(mean, stddev);
     return_size = DataSize<DataUnit::B>(distr(generator));
   } else {
     throw std::runtime_error("Invalid file size distribution!");
   }
+
   if (safe) {
     std::filesystem::space_info fs_status = fs_utils::get_fs_status(getParameter("directory").get_string());
-    if (return_size.get_value() > fs_status.available) {
-      return_size = DataSize<DataUnit::B>(fs_status.available);
-      auto block_size = get_block_size().convert<DataUnit::B>().get_value();
-      return_size = DataSize<DataUnit::B>(return_size.get_value() - (return_size.get_value() % block_size));
+    auto block_size = get_block_size().convert<DataUnit::B>().get_value();
+    auto safe_margin = DataSize<DataUnit::B>::fromString(getParameter("settings-safe-margin").get_string());
+    // Subtract one block as a safety margin from the available space.
+    uint64_t safe_available = (fs_status.available > safe_margin.get_value() ? fs_status.available - safe_margin.get_value() : 0);
+
+    logger.debug("return size= {}, free space = {}, safe available = {}", return_size.get_value(), fs_status.available, safe_available);
+
+    if (return_size.get_value() > safe_available) {
+      // Align file size to block boundary using the safe available space.
+      uint64_t aligned_size = safe_available - (safe_available % block_size);
+      return_size = DataSize<DataUnit::B>(aligned_size);
     }
   }
+
   logger.debug("Return get_file_size = {}", return_size);
   return return_size;
 }
