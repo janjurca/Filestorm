@@ -1,15 +1,7 @@
 name: Fedora
 
-on:
-  push:
-    branches:
-      - master
-      - main
-  pull_request:
-    branches:
-      - master
-      - main
-
+on: [ push , pull_request ] 
+  
 env:
   CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
 
@@ -20,7 +12,7 @@ jobs:
     steps:
       - name: install_dependencies
         run: |
-          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel
+          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel
 
       - uses: actions/checkout@v4
         with:
@@ -52,7 +44,7 @@ jobs:
     steps:
       - name: install_dependencies
         run: |
-          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel
+          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel
 
       - uses: actions/checkout@v4
         with:
@@ -71,7 +63,6 @@ jobs:
       - name: configure
         run: make tests
 
-  
   trigger-copr-build:
     needs: [build, tests]
     runs-on: ubuntu-latest
