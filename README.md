@@ -1,6 +1,6 @@
-[![Actions Status](https://github.com/janjurca/filestorm/workflows/MacOS/badge.svg?branch=master)](https://github.com/janjurca/filestorm/actions)
-[![Actions Status](https://github.com/janjurca/filestorm/workflows/Fedora/badge.svg?branch=master)](https://github.com/janjurca/filestorm/actions)
-[![Actions Status](https://github.com/janjurca/filestorm/workflows/Ubuntu/badge.svg?branch=master)](https://github.com/janjurca/filestorm/actions)
+[![MacOS](https://github.com/janjurca/Filestorm/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/janjurca/Filestorm/actions/workflows/macos.yml)
+[![Fedora](https://github.com/janjurca/Filestorm/actions/workflows/fedora.yml/badge.svg?branch=master)](https://github.com/janjurca/Filestorm/actions/workflows/fedora.yml)
+[![Ubuntu](https://github.com/janjurca/Filestorm/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/janjurca/Filestorm/actions/workflows/ubuntu.yml)
 [![codecov](https://codecov.io/gh/janjurca/filestorm/branch/master/graph/badge.svg?branch=master)](https://codecov.io/gh/janjurca/filestorm)
 [![rpmbuild](https://copr.fedorainfracloud.org/coprs/jjurca/filestorm/package/filestorm/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/jjurca/filestorm/)
 <!---
