@@ -22,8 +22,8 @@ CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
 
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
-find_package(cxxopts REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 if(TEST_INSTALLED_VERSION)
   find_package(filestorm REQUIRED)
@@ -36,8 +36,13 @@ endif()
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
 add_executable(${PROJECT_NAME} ${sources})
 target_link_libraries(
-  ${PROJECT_NAME} doctest::doctest filestorm::filestorm fmt::fmt spdlog::spdlog
+  ${PROJECT_NAME}
+  doctest::doctest
+  filestorm::filestorm
+  fmt::fmt
+  spdlog::spdlog
   nlohmann_json::nlohmann_json
+  Eigen3::Eigen
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 

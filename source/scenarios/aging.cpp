@@ -9,7 +9,8 @@
 #include <filestorm/utils/logger.h>
 #include <fmt/format.h>
 #include <sys/stat.h>  // for S_IRWXU
-#include <unistd.h>    // for close
+#include <sys/types.h>
+#include <unistd.h>  // for close
 
 #include <algorithm>
 #include <cerrno>  // for errno
@@ -17,6 +18,7 @@
 #include <cstring>  // for strerror
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <iostream>  // for std::cerr
 #include <memory>    // for std::unique_ptr
 #include <random>
@@ -37,9 +39,19 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("y", "sync", "Sync after each write", "false"));
   addParameter(Parameter("o", "direct_io", "Use direct IO", "false"));
   addParameter(Parameter("t", "time", "Time to run", "2h"));
+  addParameter(Parameter("", "rapid-aging",
+                         "The testing will try to age the filesystem at first by only allocating files without data writes in order to get the aged state much faster than the using normal aging "
+                         "process. downside of this is that you wont get the data performance for the for the initial aging stage.",
+                         "false"));
+
   addParameter(Parameter("", "create-dir", "If testing directory doesn't exists try to create it.", "false"));
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
   addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
+  addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "28"));
+  addParameter(Parameter("", "settings-safe-margin",
+                         "When new file is computed and there is not enough space the new file size is shrinked to available size but in some cases the fs has a file size overhead because of "
+                         "metadata writes which are hard to predict and compute. So the safe margin is introduced which specify what is a minimal space amount that should be left available",
+                         "1MB"));
 }
 
 AgingScenario::~AgingScenario() {}
@@ -59,6 +71,9 @@ void AgingScenario::run() {
     logger.warn("Directory {} is not empty!", getParameter("directory").get_string());
     throw std::runtime_error(fmt::format("{} is not empty!", getParameter("directory").get_string()));
   }
+  rapid_aging = getParameter("rapid-aging").get_bool();
+
+  logger.debug("Rapid aging is: {}", rapid_aging);
 
   FileTree tree(getParameter("directory").get_string(), getParameter("depth").get_int());
   std::map<std::string, Transition> transtions;
@@ -66,6 +81,8 @@ void AgingScenario::run() {
   transtions.emplace("S->ALTER", Transition(S, ALTER, "pA"));
   transtions.emplace("S->DELETE", Transition(S, DELETE, "pD"));
   transtions.emplace("CREATE->CREATE_FILE", Transition(CREATE, CREATE_FILE, "pCF"));
+  transtions.emplace("CREATE->CREATE_FILE_FALLOCATE", Transition(CREATE, CREATE_FILE_FALLOCATE, "pCFF"));
+  transtions.emplace("CREATE_FILE_FALLOCATE->END", Transition(CREATE_FILE_FALLOCATE, END, "p1"));
   transtions.emplace("CREATE->CREATE_DIR", Transition(CREATE, CREATE_DIR, "pCD"));
   transtions.emplace("ALTER->ALTER_SMALLER", Transition(ALTER, ALTER_SMALLER, "pAS"));
   transtions.emplace("ALTER->ALTER_BIGGER", Transition(ALTER, ALTER_BIGGER, "pAB"));
@@ -111,10 +128,12 @@ void AgingScenario::run() {
   }
   logger.set_progress_bar(&bar);
 
+  PolyCurve extents_curve(1, 10);
+
   while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
          && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
     result.setIteration(iteration);
-    compute_probabilities(probabilities, tree);
+    compute_probabilities(probabilities, tree, extents_curve);
     psm.performTransition(probabilities);
     switch (psm.getCurrentState()) {
       case S:
@@ -150,6 +169,38 @@ void AgingScenario::run() {
 
         result.setAction(Result::Action::CREATE_FILE);
         result.setOperation(Result::Operation::WRITE);
+        result.setPath(file_node->path(true));
+        result.setSize(file_size);
+        result.setDuration(duration);
+        break;
+      }
+      case CREATE_FILE_FALLOCATE: {
+        FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
+        logger.debug(fmt::format("CREATE_FILE_FALLOCATE {}", file_node->path(true)));
+        DataSize<DataUnit::B> file_size = get_file_size();
+
+        int fd = open_file(file_node->path(true).c_str(), O_RDWR | O_CREAT);
+        MeasuredCBAction action([&]() {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#  error "Windows is not supported"
+#elif __APPLE__
+          if (ftruncate(fd, file_size.get_value()) == -1) {
+            throw std::runtime_error(fmt::format("ftruncate failed: {}", strerror(errno)));
+          }
+#elif defined(__linux__)
+          if (fallocate(fd, 0, 0, file_size.get_value()) == -1) {
+            throw std::runtime_error(fmt::format("Fallocate failed: {}", strerror(errno)));
+          }
+#endif
+        });
+        auto duration = action.exec();
+        close(fd);
+        logger.debug(fmt::format("CREATE_FILE_FALLOCATE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
+                                 (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+        touched_files.push_back(file_node);
+
+        result.setAction(Result::Action::CREATE_FILE_FALLOCATE);
+        result.setOperation(Result::Operation::FALLOCATE);
         result.setPath(file_node->path(true));
         result.setSize(file_size);
         result.setDuration(duration);
@@ -262,7 +313,7 @@ void AgingScenario::run() {
         auto random_file = tree.randomPunchableFile();
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
-        std::tuple<size_t, size_t> hole_adress = random_file->getHoleAdress(block_size, true);
+        std::tuple<size_t, size_t> hole_adress = random_file->getHoleAddress(block_size, true);
         // Round to modulo blocksize
         logger.debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_adress), std::get<1>(hole_adress));
         MeasuredCBAction action([&]() {
@@ -331,7 +382,7 @@ void AgingScenario::run() {
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         logger.debug("DELETE_FILE {}", random_file_path);
-        auto file_extents = random_file->getExtentsCount(true);
+        auto file_extents = random_file->getExtents(true).size();
 
         MeasuredCBAction action([&]() { std::filesystem::remove(random_file_path); });
         action.exec();
@@ -356,20 +407,21 @@ void AgingScenario::run() {
           sync();
         }
         for (auto& file : touched_files) {
-          auto original_extents = file->getExtentsCount(false);
-          auto updated_extents = file->getExtentsCount(true);
-          logger.debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents);
-          tree.total_extents_count += updated_extents - original_extents;
+          auto original_extents = file->getExtents(false).size();
+          auto updated_extents = file->getExtents(true);
+          int updated_extents_size = updated_extents.size();
+
+          logger.debug("File {} extents: {} -> {}", file->path(true), original_extents, updated_extents_size);
+          tree.total_extents_count += updated_extents_size - original_extents;
           if (!file->isPunchable(get_block_size().convert<DataUnit::B>().get_value())) {
             tree.removeFromPunchableFiles(file);
           }
           if (file->path(true) == result.getPath()) {
-            result.setFileExtentCount(updated_extents);
+            result.setFileExtentCount(updated_extents_size);
           }
         }
         logger.debug("Total extents count: {}, File Count {}, F avail files {}, free space {} MB", tree.total_extents_count, tree.all_files.size(), tree.files_for_fallocate.size(),
                      fs_utils::get_fs_status(getParameter("directory").get_string()).available / 1024 / 1024);
-        touched_files.clear();
         result.setExtentsCount(tree.total_extents_count);
         result.commit();
         result = Result();
@@ -379,7 +431,14 @@ void AgingScenario::run() {
         iteration++;
         bar.set_meta("extents", fmt::format("{}", tree.total_extents_count));
         bar.set_meta("f-count", fmt::format("{}", tree.all_files.size()));
+        if (extents_curve.isFitted()) {
+          bar.set_meta("slope", fmt::format("{}", extents_curve.slopeAngle()));
+        }
         bar.update(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start));
+        if (touched_files.size() > 0) {
+          extents_curve.addPoint(tree.total_extents_count);
+        }
+        touched_files.clear();
         break;
       default:
         break;
@@ -392,7 +451,7 @@ void AgingScenario::run() {
   int total_extents = 0;
   for (auto& file : tree.all_files) {
     file_count++;
-    total_extents += file->getExtentsCount();
+    total_extents += file->getExtents().size();
   }
   logger.info("File count: {}, total extents: {}", file_count, total_extents);
   logger.set_progress_bar(nullptr);
@@ -403,7 +462,7 @@ void AgingScenario::run() {
   tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Nodeptr dir) { std::filesystem::remove(dir->path(true)); });
 }
 
-void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree) {
+void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree, PolyCurve& curve) {
   probabilities.clear();
   auto fs_status = fs_utils::get_fs_status(getParameter("directory").get_string());
 
@@ -412,7 +471,9 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   // logger.debug("CAF input: {}", ((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity))));
 
   // Handle case when available space is less than block size. If this happens, we can't write any more data. Even thought the drive isnt completely full.
-  if (fs_status.available <= get_block_size().convert<DataUnit::B>().get_value() * 3) {
+  auto safe_margin = DataSize<DataUnit::B>::fromString(getParameter("settings-safe-margin").get_string());
+
+  if (fs_status.available <= safe_margin.get_value()) {
     fs_status.available = 0;
   }
 
@@ -438,6 +499,20 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pDD"] = 0.01;
   probabilities["pDF"] = 1 - probabilities["pDD"];
   probabilities["pCF"] = (tree.getDirectoryCount() / getParameter("ndirs").get_int());
+  probabilities["pCFF"] = 0;
+  if (rapid_aging) {
+    probabilities["pCFF"] = probabilities["pCF"];
+    probabilities["pCF"] = 0;
+    if (curve.getPointCount() > 10) {
+      curve.fitPolyCurve();
+      logger.debug("Extents curve angle: {}", curve.slopeAngle());
+      if (curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
+        rapid_aging = false;
+        logger.debug("Rapid aging - disabling");
+      }
+    }
+  }
+  probabilities["pCD"] = 1 - probabilities["pCF"] - probabilities["pCFF"];
   probabilities["pCFO"] = 0.3;
   probabilities["pCFR"] = 0.3;
   probabilities["pCFE"] = 1 - probabilities["pCFO"] - probabilities["pCFR"];
@@ -462,26 +537,36 @@ DataSize<DataUnit::B> AgingScenario::get_file_size(uint64_t range_from, uint64_t
   std::random_device rand_dev;
   std::mt19937 generator(rand_dev());
   DataSize<DataUnit::B> return_size(0);
+
   if (getParameter("sdist").get_string() == "uniform") {
     std::uniform_int_distribution<uint64_t> distr(range_from, range_to);
     auto d = distr(generator);
     return_size = DataSize<DataUnit::B>(d);
   } else if (getParameter("sdist").get_string() == "normal") {
-    double mean = range_to / 2;
-    double stddev = mean / 2;
+    double mean = range_to / 2.0;
+    double stddev = mean / 2.0;
     std::normal_distribution<double> distr(mean, stddev);
     return_size = DataSize<DataUnit::B>(distr(generator));
   } else {
     throw std::runtime_error("Invalid file size distribution!");
   }
+
   if (safe) {
     std::filesystem::space_info fs_status = fs_utils::get_fs_status(getParameter("directory").get_string());
-    if (return_size.get_value() > fs_status.available) {
-      return_size = DataSize<DataUnit::B>(fs_status.available);
-      auto block_size = get_block_size().convert<DataUnit::B>().get_value();
-      return_size = DataSize<DataUnit::B>(return_size.get_value() - (return_size.get_value() % block_size));
+    auto block_size = get_block_size().convert<DataUnit::B>().get_value();
+    auto safe_margin = DataSize<DataUnit::B>::fromString(getParameter("settings-safe-margin").get_string());
+    // Subtract one block as a safety margin from the available space.
+    uint64_t safe_available = (fs_status.available > safe_margin.get_value() ? fs_status.available - safe_margin.get_value() : 0);
+
+    logger.debug("return size= {}, free space = {}, safe available = {}", return_size.get_value(), fs_status.available, safe_available);
+
+    if (return_size.get_value() > safe_available) {
+      // Align file size to block boundary using the safe available space.
+      uint64_t aligned_size = safe_available - (safe_available % block_size);
+      return_size = DataSize<DataUnit::B>(aligned_size);
     }
   }
+
   logger.debug("Return get_file_size = {}", return_size);
   return return_size;
 }
