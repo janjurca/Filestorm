@@ -473,7 +473,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   // Handle case when available space is less than block size. If this happens, we can't write any more data. Even thought the drive isnt completely full.
   auto safe_margin = DataSize<DataUnit::B>::fromString(getParameter("settings-safe-margin").get_string());
 
-  if (fs_status.available <= safe_margin.get_value()) {
+  if (fs_status.available <= (safe_margin.get_value() + get_block_size().get_value())) {
     fs_status.available = 0;
   }
 
