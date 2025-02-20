@@ -432,7 +432,7 @@ void AgingScenario::run() {
         bar.set_meta("extents", fmt::format("{}", tree.total_extents_count));
         bar.set_meta("f-count", fmt::format("{}", tree.all_files.size()));
         if (extents_curve.isFitted()) {
-          bar.set_meta("slope", fmt::format("{%.3f}", (extents_curve.slopeAngle())));
+          bar.set_meta("slope", fmt::format("{:.3f}", (extents_curve.slopeAngle())));
         }
         bar.update(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start));
         if (touched_files.size() > 0) {
