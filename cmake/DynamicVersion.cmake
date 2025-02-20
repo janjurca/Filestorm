@@ -304,13 +304,13 @@ function(get_dynamic_version)
 
   # Set fallback values
   if(DEFINED ARGS_FALLBACK_VERSION)
-    message(WARNING "DynamicVersion: Using fallback version: ${ARGS_FALLBACK_VERSION}")
+    message(STATUS "DynamicVersion: Using fallback version: ${ARGS_FALLBACK_VERSION}")
     string(JSON data SET ${data} version ${ARGS_FALLBACK_VERSION})
     file(WRITE ${ARGS_TMP_FOLDER}/.DynamicVersion.json ${data})
     file(WRITE ${ARGS_TMP_FOLDER}/.version ${ARGS_FALLBACK_VERSION})
   endif()
   if(DEFINED ARGS_FALLBACK_HASH)
-    message(WARNING "DynamicVersion: Using fallback hash: ${ARGS_FALLBACK_HASH}")
+    message(STATUS "DynamicVersion: Using fallback hash: ${ARGS_FALLBACK_HASH}")
     # TODO We should probably dont ignore this string(JSON data SET ${data} commit
     # ${ARGS_FALLBACK_HASH})
     file(WRITE ${ARGS_TMP_FOLDER}/.DynamicVersion.json ${data})
@@ -385,7 +385,7 @@ function(get_dynamic_version)
     )
     # Get version and describe-name
     execute_process(
-      COMMAND ${GIT_EXECUTABLE} describe --tags --match=?[0-9.]*
+      COMMAND ${GIT_EXECUTABLE} describe --tags --match=v?[0-9.]* --dirty
       WORKING_DIRECTORY ${ARGS_PROJECT_SOURCE}
       OUTPUT_VARIABLE describe-name
       OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY
