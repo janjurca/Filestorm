@@ -23,9 +23,7 @@ def fit_curve(x, y, degree=10):
 
 colors = ['Reds', 'Blues', 'Greens', 'Purples', 'Oranges', 'Greys']
 
-fig, axes = plt.subplots(len(args.operations), 1, figsize=(10, 6 * len(args.operations)))
-if not isinstance(axes, list):
-    axes = [axes]
+fig, axes = plt.subplots(len(args.operations), 1, figsize=(10, 4 * len(args.operations)))
 
 for i, file_path in enumerate(args.file):
     print(f">>>>>>>>>>>>>>>>> Processing {file_path}")
@@ -35,6 +33,7 @@ for i, file_path in enumerate(args.file):
     data = data[data["iteration"] <= args.iterations]
 
     for j, operation in enumerate(args.operations):
+        print(f"================== Processing {operation}")
         operation_data = data[data["action"] == operation]
         operation_data["duration_per_size"] = operation_data["duration"] / operation_data["size"]
         operation_data["duration_seconds"] = operation_data["duration"] / 1e9
@@ -51,7 +50,7 @@ for i, file_path in enumerate(args.file):
         axes[j].set_xlabel('Iterations')
         axes[j].set_ylabel('Speed MB/s')
         axes[j].set_title(f'{operation} Speed Analysis')
-        axes[j].legend()
+        #axes[j].legend()
         # Add color bar
         cbar = plt.colorbar(axes[j].scatter(operation_data["iteration"], operation_data["speed_mbs"], s=marker_size, c=marker_color, cmap=colors[i], alpha=0.5, label=f"{file_path} - {operation}"))
         cbar.set_label('File Extent Count')

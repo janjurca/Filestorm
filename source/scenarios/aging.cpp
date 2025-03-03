@@ -47,7 +47,7 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("", "create-dir", "If testing directory doesn't exists try to create it.", "false"));
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
   addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
-  addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "28"));
+  addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "37"));
   addParameter(Parameter("", "settings-safe-margin",
                          "When new file is computed and there is not enough space the new file size is shrinked to available size but in some cases the fs has a file size overhead because of "
                          "metadata writes which are hard to predict and compute. So the safe margin is introduced which specify what is a minimal space amount that should be left available",
@@ -476,7 +476,7 @@ void AgingScenario::run() {
         bar.set_meta("extents", fmt::format("{}", tree.total_extents_count));
         bar.set_meta("f-count", fmt::format("{}", tree.all_files.size()));
         if (extents_curve.isFitted()) {
-          bar.set_meta("slope", fmt::format("{}", extents_curve.slopeAngle()));
+          bar.set_meta("slope", fmt::format("{:.3f}", extents_curve.slopeAngle()));
         }
         bar.update(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start));
         if (touched_files.size() > 0) {
@@ -517,7 +517,7 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   // Handle case when available space is less than block size. If this happens, we can't write any more data. Even thought the drive isnt completely full.
   auto safe_margin = DataSize<DataUnit::B>::fromString(getParameter("settings-safe-margin").get_string());
 
-  if (fs_status.available <= safe_margin.get_value()) {
+  if (fs_status.available <= (safe_margin.get_value() + get_block_size().get_value())) {
     fs_status.available = 0;
   }
 
