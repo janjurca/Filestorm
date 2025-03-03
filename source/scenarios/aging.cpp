@@ -364,7 +364,7 @@ void AgingScenario::run() {
           throw std::runtime_error("FALLOCATE not supported on this system");
 
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-          if (new_file_size > actual_file_size) {  // Only expand, never shrink
+          if (new_file_size.get_value() > actual_file_size) {  // Only expand, never shrink
             if (fallocate(fd, 0, actual_file_size, new_file_size.get_value() - actual_file_size) == -1) {
               perror("fallocate");
               throw std::runtime_error("fallocate failed for file: " + random_file_path);
