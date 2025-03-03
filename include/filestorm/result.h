@@ -85,6 +85,10 @@ public:
         return "ALTER_SMALLER_FALLOCATE";
       case ALTER_BIGGER:
         return "ALTER_BIGGER";
+      case ALTER_BIGGER_WRITE:
+        return "ALTER_BIGGER_WRITE";
+      case ALTER_BIGGER_FALLOCATE:
+        return "ALTER_BIGGER_FALLOCATE";
       case NONE:
         return "NONE";
       default:
