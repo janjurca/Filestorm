@@ -30,8 +30,12 @@ for i, file_path in enumerate(args.file):
     with open(file_path) as fd:
         data = pd.read_json(fd)
 
+    data["smoothed"] = data["total_extents_count"].rolling(window=10000, min_periods=1).median()
+
     print(data)
     axes.scatter(data["iteration"], data["total_extents_count"], s=1, c="blue", cmap=colors[i], alpha=0.5, label=f"{file_path}")
+    axes.scatter(data["iteration"], data["smoothed"], s=1, c="red", cmap=colors[i], alpha=0.5, label=f"{file_path}")
+
     axes.set_xlabel("Iterations")
     axes.set_ylabel("extent count")
     # axes[j].legend()

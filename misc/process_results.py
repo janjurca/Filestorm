@@ -40,6 +40,7 @@ for i, file_path in enumerate(args.file):
     data = data[data["iteration"] <= args.iterations]
 
     for j, operation in enumerate(args.operations):
+        print(f"================== Processing {operation}")
         operation_data = data[data["action"] == operation]
         operation_data["duration_per_size"] = operation_data["duration"] / operation_data["size"]
         operation_data["duration_seconds"] = operation_data["duration"] / 1e9
