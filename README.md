@@ -202,4 +202,4 @@ The project is still in the early stages of development and there is a lot of wo
 
 
 ## Author
-Developed by **Jan Jurca** within Kernel Performance QE team at Red Hat.
+Developed by **Jan Jurca** within Kernel Performance team at Red Hat.
