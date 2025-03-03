@@ -99,7 +99,11 @@ void AgingScenario::run() {
   transtions.emplace("ALTER_SMALLER->ALTER_SMALLER_FALLOCATE", Transition(ALTER_SMALLER, ALTER_SMALLER_FALLOCATE, "pASF"));
   transtions.emplace("ALTER_SMALLER_TRUNCATE->END", Transition(ALTER_SMALLER_TRUNCATE, END, "p1"));
   transtions.emplace("ALTER_SMALLER_FALLOCATE->END", Transition(ALTER_SMALLER_FALLOCATE, END, "p1"));
-  transtions.emplace("ALTER_BIGGER->END", Transition(ALTER_BIGGER, END, "p1"));
+  transtions.emplace("ALTER_BIGGER->ALTER_BIGGER_WRITE", Transition(ALTER_BIGGER, ALTER_BIGGER_WRITE, "pABW"));
+  transtions.emplace("ALTER_BIGGER->ALTER_BIGGER_FALLOCATE", Transition(ALTER_BIGGER, ALTER_BIGGER_FALLOCATE, "pABF"));
+  transtions.emplace("ALTER_BIGGER_WRITE->END", Transition(ALTER_BIGGER_WRITE, END, "p1"));
+  transtions.emplace("ALTER_BIGGER_FALLOCATE->END", Transition(ALTER_BIGGER_FALLOCATE, END, "p1"));
+
   transtions.emplace("ALTER_METADATA->END", Transition(ALTER_METADATA, END, "p1"));
   transtions.emplace("DELETE_FILE->END", Transition(DELETE_FILE, END, "p1"));
   transtions.emplace("DELETE_DIR->END", Transition(DELETE_DIR, END, "p1"));
@@ -342,6 +346,46 @@ void AgingScenario::run() {
       }
       case ALTER_BIGGER: {
         logger.debug("ALTER_BIGGER");
+        break;
+      }
+      case ALTER_BIGGER_FALLOCATE: {
+        logger.debug("ALTER_BIGGER_FALLOCATE");
+        auto random_file = tree.randomFile();
+        auto random_file_path = random_file->path(true);
+        auto actual_file_size = fs_utils::file_size(random_file_path);
+        auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value());
+        logger.debug("ALTER_BIGGER_FALLOCATE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
+        int fd = open_file(random_file_path.c_str(), O_RDWR);
+        MeasuredCBAction action([&]() {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#  error "Windows is not supported"
+#elif __APPLE__
+#  warning "FALLOCATE not supported on macOS"
+          throw std::runtime_error("FALLOCATE not supported on this system");
+
+#elif __linux__ || __unix__ || defined(_POSIX_VERSION)
+          if (new_file_size.get_value() > actual_file_size) {  // Only expand, never shrink
+            if (fallocate(fd, 0, actual_file_size, new_file_size.get_value() - actual_file_size) == -1) {
+              perror("fallocate");
+              throw std::runtime_error("fallocate failed for file: " + random_file_path);
+            }
+          } else {
+            logger.warn("File {} is already bigger than new size", random_file_path);
+          }
+#endif
+          close(fd);
+        });
+        auto duration = action.exec();
+        touched_files.push_back(random_file);
+        result.setAction(Result::Action::ALTER_BIGGER_FALLOCATE);
+        result.setOperation(Result::Operation::FALLOCATE);
+        result.setPath(random_file_path);
+        result.setSize(new_file_size - DataSize<DataUnit::B>(actual_file_size));
+        result.setDuration(duration);
+        break;
+      }
+      case ALTER_BIGGER_WRITE: {
+        logger.debug("ALTER_BIGGER");
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
@@ -349,7 +393,7 @@ void AgingScenario::run() {
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
         auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value());
-        logger.debug("ALTER_BIGGER {} from {} to {}", random_file_path, actual_file_size, new_file_size);
+        logger.debug("ALTER_BIGGER_WRITE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
         int fd = open_file(random_file_path.c_str(), O_WRONLY | O_APPEND);
         auto current_size = lseek(fd, 0, SEEK_END);
         if (current_size == -1) {
@@ -368,7 +412,7 @@ void AgingScenario::run() {
         logger.debug("ALTER_BIGGER {} from {} to {} in {} ms | Speed {} MB/s", random_file_path, actual_file_size, new_file_size.get_value(), duration.count() / 1000000.0,
                      ((new_file_size.get_value() - actual_file_size) / 1024. / 1024.) / (duration.count() / 1000000000.0));
         touched_files.push_back(random_file);
-        result.setAction(Result::Action::ALTER_BIGGER);
+        result.setAction(Result::Action::ALTER_BIGGER_WRITE);
         result.setOperation(Result::Operation::WRITE);
         result.setPath(random_file_path);
         result.setSize(new_file_size - DataSize<DataUnit::B>(actual_file_size));
@@ -484,6 +528,10 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   probabilities["pA"] = 1 - caf - probabilities["pD"];
   probabilities["pAM"] = 0.1;
   probabilities["pAB"] = caf - probabilities["pAM"];
+
+  probabilities["pABF"] = 0;
+  probabilities["pABW"] = 1 - probabilities["pABF"];
+
   probabilities["pAS"] = 1 - probabilities["pAM"] - probabilities["pAB"];
 #if __linux__
   if (getParameter("features-punch-hole").get_bool() && tree.hasPunchableFiles()) {
@@ -503,6 +551,8 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
   if (rapid_aging) {
     probabilities["pCFF"] = probabilities["pCF"];
     probabilities["pCF"] = 0;
+    probabilities["pABF"] = 1;
+    probabilities["pABW"] = 0;
     if (curve.getPointCount() > 10) {
       curve.fitPolyCurve();
       logger.debug("Extents curve angle: {}", curve.slopeAngle());

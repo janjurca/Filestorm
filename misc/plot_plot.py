@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import math
+import sys
 
 
 def main():
@@ -43,7 +44,7 @@ def main():
 
         # Fit a linear line if we have at least 2 points
         if n >= 2:
-            coeffs = np.polyfit(x_vals, y_vals, 1)  # Fit linear polynomial
+            coeffs = np.polyfit(x_vals, y_vals, int(sys.argv[1]))  # Fit linear polynomial
             poly_func = np.poly1d(coeffs)  # Create polynomial function
 
             # Generate smooth x values for plotting the curve
