@@ -188,7 +188,7 @@ void WriteMonitoredAction::work() {
       ssize_t returned_bytes = pwrite(fd, data, block_size, get_offset());
       if (returned_bytes == -1) {
         logger.error("{}::work: error writing to file: {}", typeid(*this).name(), strerror(errno));
-        logger.error("{}::work: fd: {} data: {} block_size: {} offset: {}", fd, data, block_size, get_offset());
+        logger.error("{}::work: fd: {} block_size: {} offset: {}", typeid(*this).name(), fd, block_size, get_offset());
         break;
       }
       m_written_bytes += returned_bytes;
