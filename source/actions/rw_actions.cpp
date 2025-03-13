@@ -114,6 +114,10 @@ inline off_t RandomReadMonitoredAction::get_offset() {
   return block_index * block_size_bytes;
 }
 
+WriteMonitoredAction::WriteMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes)
+    //: VirtualMonitoredAction(monitoring_interval, on_log), FileActionAttributes(file_attributes) {}
+    : RWAction(monitoring_interval, on_log, file_attributes) {}
+
 inline off_t WriteMonitoredAction::get_offset() {
   static off_t offset = 0;
   static off_t block_size_bytes = get_block_size().convert<DataUnit::B>().get_value();
