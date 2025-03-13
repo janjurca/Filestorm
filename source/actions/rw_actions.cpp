@@ -183,8 +183,14 @@ void WriteMonitoredAction::work() {
       std::this_thread::sleep_for(std::chrono::milliseconds(time_limit));
       ended = true;
     });
+    logger.debug("{}::work: m_written_bytes: {}", typeid(*this).name(), m_written_bytes);
     while (!ended) {
-      m_written_bytes += pwrite(fd, data, block_size, get_offset());
+      ssize_t returned_bytes = pwrite(fd, data, block_size, get_offset());
+      if (returned_bytes == -1) {
+        logger.error("{}::work: error writing to file: {}", typeid(*this).name(), strerror(errno));
+        break;
+      }
+      m_written_bytes += returned_bytes;
     }
     timerThread.join();
   } else {
