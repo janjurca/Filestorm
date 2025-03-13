@@ -52,7 +52,7 @@ void BasicScenario::run() {
         auto speed = diff / duration_diff;           // bytes per nanosecond
         auto speed_mb_s = speed * 1e9;               // bytes per second
         auto speed_mb = speed_mb_s / (1024 * 1024);  // Convert to MB/s
-        logger.info("Action: {} | Value: {} | Duration: {} | Speed: {:.6f} MB/s", key, prev_value, duration_diff, speed_mb);
+        logger.info("Action: {} | Diff: {} | Value: {} | Duration: {} | Speed: {:.6f} MB/s", key, diff, prev_value, duration_diff, speed_mb);
       } else {
         logger.warn("Duration difference is zero, skipping speed calculation for key: {}", key);
       }
