@@ -175,6 +175,7 @@ void WriteMonitoredAction::work() {
 
     auto data = line.get();
     size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+    logger.debug("{}::work: block_size: {}", typeid(*this).name(), block_size);
     auto time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count();
 
     bool ended = false;
