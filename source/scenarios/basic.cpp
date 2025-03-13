@@ -37,21 +37,25 @@ void BasicScenario::run() {
       auto tuple = monitored_data.at(key).back();
       auto prev_tuple = monitored_data.at(key).at(monitored_data.at(key).size() - 2);
 
-      auto duration = std::get<0>(tuple);
-      auto value = std::get<1>(tuple);
+      auto duration = std::get<0>(tuple);  // duration in nanoseconds
+      auto value = std::get<1>(tuple);     // value in bytes
       result.setTimestamp(duration);
       result.addResult(key, std::to_string(value));
 
       auto prev_duration = std::get<0>(prev_tuple);
       auto prev_value = std::get<1>(prev_tuple);
 
-      auto diff = value - prev_value;
-      auto duration_diff = duration - prev_duration;
+      auto diff = static_cast<double>(value) - static_cast<double>(prev_value);
+      auto duration_diff = static_cast<double>(duration - prev_duration);  // Convert to double
 
-      auto speed = diff / duration_diff.count();     // bytes per nanosecond
-      auto speed_mb_s = speed * 1000 * 1000 * 1000;  // bytes per second
-      auto speed_mb = speed_mb_s / 1024 / 1024;      // megabytes per second
-      logger.info("Action: {} | Value: {} | Duration: {} | Speed: {} MB/s", key, prev_value, duration_diff.count(), speed_mb);
+      if (duration_diff > 0) {                       // Prevent division by zero
+        auto speed = diff / duration_diff;           // bytes per nanosecond
+        auto speed_mb_s = speed * 1e9;               // bytes per second
+        auto speed_mb = speed_mb_s / (1024 * 1024);  // Convert to MB/s
+        logger.info("Action: {} | Value: {} | Duration: {} | Speed: {:.6f} MB/s", key, prev_value, duration_diff, speed_mb);
+      } else {
+        logger.warn("Duration difference is zero, skipping speed calculation for key: {}", key);
+      }
     }
     result.commit();
   };
