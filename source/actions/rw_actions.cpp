@@ -133,15 +133,17 @@ inline void WriteMonitoredAction::generate_random_chunk(char* chunk, size_t size
 
   std::generate_n(chunk, size, []() { return dis(gen); });
 }
-
-WriteMonitoredAction::WriteMonitoredAction(std::chrono::milliseconds monitoring_interval, std::function<void(VirtualMonitoredAction*)> on_log, FileActionAttributes file_attributes)
-    //: VirtualMonitoredAction(monitoring_interval, on_log), FileActionAttributes(file_attributes) {}
-    : RWAction(monitoring_interval, on_log, file_attributes) {}
-
 void WriteMonitoredAction::work() {
   logger.debug("{}::work: file_path: {}", typeid(*this).name(), get_file_path());
   int fd;
-  std::unique_ptr<char[]> line(new char[get_block_size().convert<DataUnit::B>().get_value()]);
+  size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+
+  // Allocate aligned buffer for Direct I/O.
+  void* buffer_ptr = nullptr;
+  if (posix_memalign(&buffer_ptr, block_size, block_size) != 0) {
+    throw std::runtime_error("WriteMonitoredAction::work: posix_memalign failed");
+  }
+  std::unique_ptr<char, decltype(&free)> line(static_cast<char*>(buffer_ptr), free);
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #  error "Windows is not supported"
@@ -157,6 +159,7 @@ void WriteMonitoredAction::work() {
 #  warning "Unknown system"
   fd = open(get_file_path().c_str(), O_DIRECT | O_RDWR | O_CREAT, S_IRWXU);
 #endif
+
   if (fd == -1) {
     std::cerr << "Error opening file: " << strerror(errno) << std::endl;
     if (errno == EINVAL) {
@@ -166,41 +169,50 @@ void WriteMonitoredAction::work() {
   }
 
   logger.debug("{}::work: file_size: {}", typeid(*this).name(), get_file_size());
-  generate_random_chunk(line.get(), get_block_size().convert<DataUnit::B>().get_value());
+  generate_random_chunk(line.get(), block_size);
+
   if (is_time_based()) {
     auto start_time = std::chrono::high_resolution_clock::now();
-    auto now_time = std::chrono::high_resolution_clock::now();
     logger.debug("{}::work: start_time: {}", typeid(*this).name(), start_time.time_since_epoch().count());
-    logger.debug("{}::work: interval: {}", typeid(*this).name(), std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count());
-
-    auto data = line.get();
-    size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
-    logger.debug("{}::work: block_size: {}", typeid(*this).name(), block_size);
     auto time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(get_time_limit()).count();
+    logger.debug("{}::work: interval: {}", typeid(*this).name(), time_limit);
 
     bool ended = false;
     std::thread timerThread([&ended, time_limit]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(time_limit));
       ended = true;
     });
+
     logger.debug("{}::work: m_written_bytes: {}", typeid(*this).name(), m_written_bytes);
+    off_t offset = get_offset();
+    // Ensure offset is aligned to block_size
+    if (offset % block_size != 0) {
+      close(fd);
+      throw std::runtime_error("WriteMonitoredAction::work: offset is not aligned to block size");
+    }
     while (!ended) {
-      ssize_t returned_bytes = pwrite(fd, data, block_size, get_offset());
+      ssize_t returned_bytes = pwrite(fd, line.get(), block_size, offset);
       if (returned_bytes == -1) {
         logger.error("{}::work: error writing to file: {}", typeid(*this).name(), strerror(errno));
-        logger.error("{}::work: fd: {} block_size: {} offset: {}", typeid(*this).name(), fd, block_size, get_offset());
+        logger.error("{}::work: fd: {} block_size: {} offset: {}", typeid(*this).name(), fd, block_size, offset);
         break;
       }
       m_written_bytes += returned_bytes;
+      offset += returned_bytes;  // update offset for sequential writes
     }
     timerThread.join();
   } else {
-    size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
-
-    generate_random_chunk(line.get(), block_size);
-    auto file_size = get_file_size().convert<DataUnit::B>().get_value();
+    // For non time-based writes, ensure the offset and size are properly handled as well.
+    size_t file_size = get_file_size().convert<DataUnit::B>().get_value();
+    off_t offset = 0;
     while (m_written_bytes < file_size) {
-      m_written_bytes += write(fd, line.get(), block_size);
+      ssize_t written = write(fd, line.get(), block_size);
+      if (written == -1) {
+        logger.error("{}::work: error writing to file: {}", typeid(*this).name(), strerror(errno));
+        break;
+      }
+      m_written_bytes += written;
+      offset += written;
     }
   }
   close(fd);
