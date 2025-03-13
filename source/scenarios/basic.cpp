@@ -46,7 +46,7 @@ void BasicScenario::run() {
       auto prev_value = std::get<1>(prev_tuple);
 
       auto diff = static_cast<double>(value) - static_cast<double>(prev_value);
-      auto duration_diff = static_cast<double>(duration - prev_duration);  // Convert to double
+      auto duration_diff = (duration - prev_duration).count();  // Convert to double
 
       if (duration_diff > 0) {                       // Prevent division by zero
         auto speed = diff / duration_diff;           // bytes per nanosecond
