@@ -161,8 +161,14 @@ void AgingScenario::run() {
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
         MeasuredCBAction action([&]() {
-          for (uint64_t written_bytes = 0; written_bytes < file_size.get_value(); written_bytes += block_size) {
-            write(fd, line.get(), block_size);
+          for (uint64_t written_bytes = 0; written_bytes < file_size.get_value();) {
+            ssize_t _written_bytes = write(fd, line.get(), block_size);
+            if (written_bytes == -1) {
+              perror("Error writing to file");
+              close(fd);
+              throw std::runtime_error(fmt::format("Error writing to file {}", file_node->path(true)));
+            }
+            written_bytes += _written_bytes;
           }
         });
         auto duration = action.exec();
@@ -222,8 +228,14 @@ void AgingScenario::run() {
         generate_random_chunk(line.get(), block_size);
         int fd = open_file(prev_file_path.c_str(), O_WRONLY);
         MeasuredCBAction action([&]() {
-          for (uint64_t written_bytes = 0; written_bytes < file_size; written_bytes += block_size) {
-            write(fd, line.get(), block_size);
+          for (uint64_t written_bytes = 0; written_bytes < file_size;) {
+            ssize_t written_bytes_ = write(fd, line.get(), block_size);
+            if (written_bytes == -1) {
+              perror("Error writing to file");
+              close(fd);
+              throw std::runtime_error(fmt::format("Error writing to file {}", prev_file_path));
+            }
+            written_bytes += written_bytes_;
           }
         });
         auto duration = action.exec();
@@ -403,8 +415,14 @@ void AgingScenario::run() {
         }
 
         MeasuredCBAction action([&]() {
-          for (uint64_t written_bytes = actual_file_size; written_bytes < new_file_size.get_value(); written_bytes += block_size) {
-            write(fd, line.get(), block_size);
+          for (uint64_t written_bytes = actual_file_size; written_bytes < new_file_size.get_value();) {
+            ssize_t written_bytes_ = write(fd, line.get(), block_size);
+            if (written_bytes == -1) {
+              perror("Error writing to file");
+              close(fd);
+              throw std::runtime_error(fmt::format("Error writing to file {}", random_file_path));
+            }
+            written_bytes += written_bytes_;
           }
           close(fd);
         });
