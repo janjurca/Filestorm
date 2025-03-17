@@ -400,12 +400,15 @@ void AgingScenario::run() {
         logger.debug("ALTER_BIGGER");
 
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
-        size_t alignment = 4096;  // Typical alignment for O_DIRECT (depends on filesystem)
+        size_t alignment = 4096;  // Common alignment for O_DIRECT (check with `stat -f`)
+
+        // Ensure block_size is aligned to 4096 bytes
         if (block_size % alignment != 0) {
-          throw std::runtime_error("Block size must be aligned to " + std::to_string(alignment) + " bytes");
+          block_size = (block_size / alignment) * alignment;  // Round down to nearest 4KB
+          logger.debug("Block size adjusted to {} for O_DIRECT", block_size);
         }
 
-        // Use posix_memalign() for aligned buffer allocation
+        // Allocate aligned memory for O_DIRECT
         void* buf = nullptr;
         if (posix_memalign(&buf, alignment, block_size) != 0) {
           throw std::runtime_error("Failed to allocate aligned memory");
@@ -420,27 +423,8 @@ void AgingScenario::run() {
 
         logger.debug("ALTER_BIGGER_WRITE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
 
-        // Open file with O_DIRECT
-        int fd = -1;
-        if (getParameter("direct_io").get_bool()) {
-          logger.debug("Opening file with O_DIRECT");
-#if defined(__linux__)
-          fd = open(random_file_path.c_str(), O_WRONLY | O_APPEND | O_DIRECT);
-#elif defined(__APPLE__)
-          fd = open(random_file_path.c_str(), O_WRONLY | O_APPEND);
-          if (fd != -1) {
-            if (fcntl(fd, F_NOCACHE, 1) == -1) {
-              close(fd);
-              throw std::runtime_error("Error on fcntl F_NOCACHE");
-            }
-          }
-#else
-#  error "Unsupported platform"
-#endif
-        } else {
-          logger.debug("Opening file without O_DIRECT");
-          fd = open(random_file_path.c_str(), O_WRONLY | O_APPEND);
-        }
+        // Open file without O_APPEND (O_APPEND conflicts with O_DIRECT)
+        int fd = open(random_file_path.c_str(), O_WRONLY | O_DIRECT);
         if (fd == -1) {
           perror("Error opening file with O_DIRECT");
           free(buf);
@@ -455,11 +439,19 @@ void AgingScenario::run() {
           throw std::runtime_error(fmt::format("Error getting file size {}", random_file_path));
         }
 
-        MeasuredCBAction action([&]() {
-          for (uint64_t written_bytes = actual_file_size; written_bytes < new_file_size.get_value();) {
-            logger.debug("Writing to file {} | {} / {}", random_file_path, written_bytes, new_file_size.get_value());
+        // Ensure write offset is aligned
+        uint64_t write_offset = actual_file_size;
+        if (write_offset % alignment != 0) {
+          write_offset = (write_offset / alignment) * alignment;  // Round down to nearest 4KB
+          logger.debug("Aligning write offset to {}", write_offset);
+        }
 
-            ssize_t written_bytes_ = write(fd, buf, block_size);
+        MeasuredCBAction action([&]() {
+          for (; write_offset < new_file_size.get_value();) {
+            logger.debug("Writing to file {} | {} / {}", random_file_path, write_offset, new_file_size.get_value());
+
+            // Use pwrite() to avoid O_APPEND issues and ensure aligned writes
+            ssize_t written_bytes_ = pwrite(fd, buf, block_size, write_offset);
             if (written_bytes_ == -1) {
               perror("Error writing to file");
               close(fd);
@@ -467,7 +459,7 @@ void AgingScenario::run() {
               throw std::runtime_error(fmt::format("Error writing to file {}", random_file_path));
             }
 
-            written_bytes += written_bytes_;
+            write_offset += written_bytes_;
           }
           close(fd);
         });
