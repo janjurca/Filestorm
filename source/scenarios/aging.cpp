@@ -398,37 +398,86 @@ void AgingScenario::run() {
       }
       case ALTER_BIGGER_WRITE: {
         logger.debug("ALTER_BIGGER");
-        std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
+
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
-        generate_random_chunk(line.get(), block_size);
+        size_t alignment = 4096;  // Typical alignment for O_DIRECT (depends on filesystem)
+        if (block_size % alignment != 0) {
+          throw std::runtime_error("Block size must be aligned to " + std::to_string(alignment) + " bytes");
+        }
+
+        // Use posix_memalign() for aligned buffer allocation
+        void* buf = nullptr;
+        if (posix_memalign(&buf, alignment, block_size) != 0) {
+          throw std::runtime_error("Failed to allocate aligned memory");
+        }
+
+        generate_random_chunk(static_cast<char*>(buf), block_size);
+
         auto random_file = tree.randomFile();
         auto random_file_path = random_file->path(true);
         auto actual_file_size = fs_utils::file_size(random_file_path);
         auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value());
+
         logger.debug("ALTER_BIGGER_WRITE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
-        int fd = open_file(random_file_path.c_str(), O_WRONLY | O_APPEND);
+
+        // Open file with O_DIRECT
+        int fd = -1;
+        if (getParameter("direct_io").get_bool()) {
+          logger.debug("Opening file with O_DIRECT");
+#if defined(__linux__)
+          fd = open(random_file_path.c_str(), O_WRONLY | O_APPEND | O_DIRECT);
+#elif defined(__APPLE__)
+          fd = open(random_file_path.c_str(), O_WRONLY | O_APPEND);
+          if (fd != -1) {
+            if (fcntl(fd, F_NOCACHE, 1) == -1) {
+              close(fd);
+              throw std::runtime_error("Error on fcntl F_NOCACHE");
+            }
+          }
+#else
+#  error "Unsupported platform"
+#endif
+        } else {
+          logger.debug("Opening file without O_DIRECT");
+          fd = open(random_file_path.c_str(), O_WRONLY | O_APPEND);
+        }
+        if (fd == -1) {
+          perror("Error opening file with O_DIRECT");
+          free(buf);
+          throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
+        }
+
         auto current_size = lseek(fd, 0, SEEK_END);
         if (current_size == -1) {
           perror("Error getting file size");
           close(fd);
+          free(buf);
           throw std::runtime_error(fmt::format("Error getting file size {}", random_file_path));
         }
 
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = actual_file_size; written_bytes < new_file_size.get_value();) {
-            ssize_t written_bytes_ = write(fd, line.get(), block_size);
-            if (written_bytes == -1) {
+            logger.debug("Writing to file {} | {} / {}", random_file_path, written_bytes, new_file_size.get_value());
+
+            ssize_t written_bytes_ = write(fd, buf, block_size);
+            if (written_bytes_ == -1) {
               perror("Error writing to file");
               close(fd);
+              free(buf);
               throw std::runtime_error(fmt::format("Error writing to file {}", random_file_path));
             }
+
             written_bytes += written_bytes_;
           }
           close(fd);
         });
+
         auto duration = action.exec();
         logger.debug("ALTER_BIGGER {} from {} to {} in {} ms | Speed {} MB/s", random_file_path, actual_file_size, new_file_size.get_value(), duration.count() / 1000000.0,
                      ((new_file_size.get_value() - actual_file_size) / 1024. / 1024.) / (duration.count() / 1000000000.0));
+
+        free(buf);  // Free aligned memory
+
         touched_files.push_back(random_file);
         result.setAction(Result::Action::ALTER_BIGGER_WRITE);
         result.setOperation(Result::Operation::WRITE);
@@ -437,6 +486,7 @@ void AgingScenario::run() {
         result.setDuration(duration);
         break;
       }
+
       case ALTER_METADATA:
         logger.debug("ALTER_METADATA");
         break;
