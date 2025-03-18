@@ -448,8 +448,6 @@ void AgingScenario::run() {
 
         MeasuredCBAction action([&]() {
           for (; write_offset < new_file_size.get_value();) {
-            logger.debug("Writing to file {} | {} / {}", random_file_path, write_offset, new_file_size.get_value());
-
             // Use pwrite() to avoid O_APPEND issues and ensure aligned writes
             ssize_t written_bytes_ = pwrite(fd, buf, block_size, write_offset);
             if (written_bytes_ == -1) {
