@@ -103,7 +103,6 @@ void AgingScenario::run() {
   transtions.emplace("ALTER_BIGGER->ALTER_BIGGER_FALLOCATE", Transition(ALTER_BIGGER, ALTER_BIGGER_FALLOCATE, "pABF"));
   transtions.emplace("ALTER_BIGGER_WRITE->END", Transition(ALTER_BIGGER_WRITE, END, "p1"));
   transtions.emplace("ALTER_BIGGER_FALLOCATE->END", Transition(ALTER_BIGGER_FALLOCATE, END, "p1"));
-
   transtions.emplace("ALTER_METADATA->END", Transition(ALTER_METADATA, END, "p1"));
   transtions.emplace("DELETE_FILE->END", Transition(DELETE_FILE, END, "p1"));
   transtions.emplace("DELETE_DIR->END", Transition(DELETE_DIR, END, "p1"));
@@ -156,7 +155,7 @@ void AgingScenario::run() {
         FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
         logger.debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
-        int fd = open_file(file_node->path(true).c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+        int fd = open_file(file_node->path(true).c_str(), O_WRONLY | O_CREAT | O_TRUNC, getParameter("direct_io").get_bool());  // add directio
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
@@ -189,7 +188,7 @@ void AgingScenario::run() {
         logger.debug(fmt::format("CREATE_FILE_FALLOCATE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
 
-        int fd = open_file(file_node->path(true).c_str(), O_RDWR | O_CREAT);
+        int fd = open_file(file_node->path(true).c_str(), O_RDWR | O_CREAT, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #  error "Windows is not supported"
@@ -226,7 +225,7 @@ void AgingScenario::run() {
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
-        int fd = open_file(prev_file_path.c_str(), O_WRONLY);
+        int fd = open_file(prev_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size;) {
             ssize_t written_bytes_ = write(fd, line.get(), block_size);
@@ -257,7 +256,7 @@ void AgingScenario::run() {
         auto prev_file_path = prev_file->path(true);
         auto file_size = fs_utils::file_size(prev_file_path);
         logger.debug("CREATE_FILE_READ {} size {}", prev_file_path, file_size);
-        int fd = open_file(prev_file_path.c_str(), O_RDONLY);
+        int fd = open_file(prev_file_path.c_str(), O_RDONLY, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
           std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
           size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
@@ -367,7 +366,7 @@ void AgingScenario::run() {
         auto actual_file_size = fs_utils::file_size(random_file_path);
         auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value());
         logger.debug("ALTER_BIGGER_FALLOCATE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
-        int fd = open_file(random_file_path.c_str(), O_RDWR);
+        int fd = open_file(random_file_path.c_str(), O_RDWR, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #  error "Windows is not supported"
@@ -424,7 +423,7 @@ void AgingScenario::run() {
         logger.debug("ALTER_BIGGER_WRITE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
 
         // Open file without O_APPEND (O_APPEND conflicts with O_DIRECT)
-        int fd = open(random_file_path.c_str(), O_WRONLY | O_DIRECT);
+        int fd = open_file(random_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool() | O_DIRECT);
         if (fd == -1) {
           perror("Error opening file with O_DIRECT");
           free(buf);
@@ -456,13 +455,13 @@ void AgingScenario::run() {
               free(buf);
               throw std::runtime_error(fmt::format("Error writing to file {}", random_file_path));
             }
-
             write_offset += written_bytes_;
           }
           close(fd);
         });
 
         auto duration = action.exec();
+
         logger.debug("ALTER_BIGGER {} from {} to {} in {} ms | Speed {} MB/s", random_file_path, actual_file_size, new_file_size.get_value(), duration.count() / 1000000.0,
                      ((new_file_size.get_value() - actual_file_size) / 1024. / 1024.) / (duration.count() / 1000000000.0));
 
@@ -687,20 +686,20 @@ DataSize<DataUnit::B> AgingScenario::get_file_size() {
   return fsize;
 }
 
-int AgingScenario::open_file(const char* path, int flags) {
+int AgingScenario::open_file(const char* path, int flags, bool direct_io) {
   int fd;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #  error "Windows is not supported"
 #elif __APPLE__
   fd = open(path, flags, S_IRWXU);
-  if (getParameter("direct_io").get_bool() && fd != -1) {
+  if (direct_io && fd != -1) {
     if (fcntl(fd, F_NOCACHE, 1) == -1) {
       close(fd);
       throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
     }
   }
 #elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-  if (getParameter("direct_io").get_bool()) {
+  if (direct_io) {
     flags |= O_DIRECT;
   }
   fd = open(path, flags, S_IRWXU);
