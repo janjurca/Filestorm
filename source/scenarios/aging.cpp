@@ -423,7 +423,7 @@ void AgingScenario::run() {
         logger.debug("ALTER_BIGGER_WRITE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
 
         // Open file without O_APPEND (O_APPEND conflicts with O_DIRECT)
-        int fd = open_file(random_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool() | O_DIRECT);
+        int fd = open_file(random_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
         if (fd == -1) {
           perror("Error opening file with O_DIRECT");
           free(buf);

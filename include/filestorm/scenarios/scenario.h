@@ -104,7 +104,7 @@ protected:
 
   bool rapid_aging = false;
   void compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree, PolyCurve& curve);
-  int open_file(const char* path, int flags);
+  int open_file(const char* path, int flags, bool direct_io);
 
 public:
   AgingScenario();
