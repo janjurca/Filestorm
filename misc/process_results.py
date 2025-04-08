@@ -4,8 +4,9 @@ import os
 import json
 import logging
 import argparse
-
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import seaborn as sns
 
 log = logging.getLogger(__name__)
 
@@ -16,20 +17,17 @@ parser.add_argument("--operations", nargs="+", required=True, help="List of oper
 args = parser.parse_args()
 
 
-# Proložení křivek dat
 def fit_curve(x, y, degree=10):
     coefficients = np.polyfit(x, y, degree)
     polynomial = np.poly1d(coefficients)
     return polynomial
 
 
-colors = ["Reds", "Blues", "Greens", "Purples", "Oranges", "Greys"]
+color_palette = sns.color_palette("tab10", len(args.file))
 
-fig, axes = plt.subplots(len(args.operations) + 1, 1, figsize=(10, 4 * (len(args.operations) + 1)))
+fig, axes = plt.subplots(len(args.operations), 2, figsize=(15, 4 * len(args.operations)))
 
-try:
-    axes[0]
-except TypeError:
+if len(args.operations) == 1:
     axes = [axes]
 
 for i, file_path in enumerate(args.file):
@@ -46,39 +44,36 @@ for i, file_path in enumerate(args.file):
         operation_data["duration_seconds"] = operation_data["duration"] / 1e9
         operation_data["speed_mbs"] = operation_data["size"] / operation_data["duration_seconds"] / 1024 / 1024
 
-        marker_size = operation_data["size"] / 1024 / 1024 / 20  # Adjust the division factor as needed
+        marker_size = operation_data["size"] / 1024 / 1024 / 20
+        color = color_palette[i]
 
         try:
             marker_color = operation_data["file_extent_count"]
         except KeyError:
             marker_color = operation_data["_file_extent_count"]
-        axes[j].scatter(operation_data["iteration"], operation_data["speed_mbs"], s=marker_size, c=marker_color, cmap=colors[i], alpha=0.5, label=f"{file_path} - {operation}")
-        axes[j].set_xlabel("Iterations")
-        axes[j].set_ylabel("Speed MB/s")
-        axes[j].set_title(f"{operation} Speed Analysis")
-        # axes[j].legend()
-        # Add color bar
-        # cbar = plt.colorbar(axes[j].scatter(operation_data["iteration"], operation_data["speed_mbs"], s=marker_size, c=marker_color, cmap=colors[i], alpha=0.5, label=f"{file_path} - {operation}"))
-        # cbar.set_label("File Extent Count")
 
-        # Fit curve for each operation
+        # Scatter plot
+        scatter = axes[j][0].scatter(operation_data["iteration"], operation_data["speed_mbs"], s=marker_size, c=[color], alpha=0.5, label=f"{file_path} - {operation}")
+        axes[j][0].set_xlabel("Iterations")
+        axes[j][0].set_ylabel("Speed MB/s")
+        axes[j][0].set_title(f"{operation} Speed Analysis")
+
+        # Fit curve
         polynomial = fit_curve(operation_data["iteration"], operation_data["speed_mbs"])
-        axes[j].plot(operation_data["iteration"], polynomial(operation_data["iteration"]), label=f"{file_path} - {operation} Fitted Curve")
+        axes[j][0].plot(operation_data["iteration"], polynomial(operation_data["iteration"]), color=color)
 
-    print(f"================== Processing extent counts")
+        # Add legend only for scatter plots
+        axes[j][0].legend(loc="upper right")
 
-    axes[j + 1].scatter(operation_data["iteration"], operation_data["total_extents_count"], s=1, cmap=colors[i], alpha=0.5, label=f"{file_path} - extent counts")
-    axes[j + 1].set_xlabel("Iterations")
-    axes[j + 1].set_ylabel("extent count")
-    axes[j + 1].set_title(f"{file_path} extent count")
+        # Boxplot for statistical analysis (separate series per file with matching color)
+        box = axes[j][1].boxplot(operation_data["speed_mbs"].dropna(), vert=True, patch_artist=True, positions=[i], widths=0.6)
+        for patch in box["boxes"]:
+            patch.set_facecolor(color)
 
-    operation_data = data[data["action"] == "CREATE_FILE_FALLOCATE"]
-
-    axes[j + 1].scatter(operation_data["iteration"], operation_data["total_extents_count"], s=1, cmap=colors[i], alpha=0.5, label=f"{file_path} - extent counts")
-    axes[j + 1].set_xlabel("Iterations")
-    axes[j + 1].set_ylabel("extent count")
-    axes[j + 1].set_title(f"{file_path} extent count")
-
+        axes[j][1].set_title(f"{operation} Speed Distribution")
+        axes[j][1].set_ylabel("Speed MB/s")
+        axes[j][1].set_xticks(range(len(args.file)))
+        axes[j][1].set_xticklabels(args.file, rotation=45, ha="right")
 
 plt.tight_layout()
 plt.show()
