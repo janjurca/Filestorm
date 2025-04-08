@@ -7,11 +7,13 @@
 #include <spdlog/spdlog.h>
 #include <unistd.h>  // Include for getopts
 
+#include <csignal>
 #include <iostream>
 #include <string>
 #include <unordered_map>
 
 #include "config.h"
+#include "interupts.h"
 
 void displayHelp() {
   std::cout << "Usage: filestorm SCENARIO\n"
@@ -68,12 +70,14 @@ auto main(int argc, char** argv) -> int {
   }
   std::string positionalArgument = argv[optind];
   try {
-    auto scenario = config.get_scenario(positionalArgument);
+    auto scenario = config.get_and_set_scenario(positionalArgument);
     int new_argc = argc - optind;
     char** new_argv = argv + optind;
 
     scenario->setup(new_argc, new_argv);
+    std::signal(SIGINT, sigint_handler);
     scenario->run();
+    std::signal(SIGINT, SIG_DFL);
     scenario->save();
   } catch (const BadScenarioSelected& e) {
     logger.error("Error on main: {}", e.what());

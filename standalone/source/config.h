@@ -17,7 +17,8 @@ public:
   Config();
   const std::vector<Scenario*> get_supported_scenarios() const;
   const std::string get_supported_scenarios_as_string() const;
-  Scenario* get_scenario(const std::string& name) const;
+  Scenario* get_and_set_scenario(const std::string& name) const;
+  static Scenario* selected_senario;
 };
 
 extern const Config config;

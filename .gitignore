@@ -5,3 +5,4 @@
 .version
 _CPack_Packages
 results.json*
+/gitignore/*
