@@ -23,13 +23,6 @@ endif()
 # ---- Add dependencies via CPM ----
 # see https://github.com/TheLartians/CPM.cmake for more info
 
-include(cmake/CPM.cmake)
-
-# PackageProject.cmake will be used to make our target installable
-CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.11.1")
-# CPMAddPackage( NAME nlohmann_json GITHUB_REPOSITORY nlohmann/json VERSION 3.9.1 OPTIONS
-# "JSON_BuildTests OFF" )
-
 option(USE_CPM "Use CPM for dependencies" OFF)
 
 if(USE_CPM)
@@ -91,6 +84,8 @@ target_include_directories(
 # the location where the project's version header will be placed should match the project's regular
 # header paths
 string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
+
+include(cmake/PackageProject.cmake)
 
 packageProject(
   NAME ${PROJECT_NAME}
