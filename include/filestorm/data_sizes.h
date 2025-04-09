@@ -28,71 +28,40 @@ public:
 
   uint64_t get_value() const { return m_value; }
 
-  // Arithmetic operators handling different units
-  template <DataUnit U> DataSize<T> operator+(const DataSize<U> &rhs) const {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    return DataSize<T>(m_value + converted_rhs);
-  }
+// Macro to generate arithmetic operators handling different units
+#define DEFINE_ARITHMETIC_OPERATOR(op)                                          \
+  template <DataUnit U> DataSize<T> operator op(const DataSize<U> &rhs) const { \
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();             \
+    return DataSize<T>(m_value op converted_rhs);                               \
+  }                                                                             \
+  template <DataUnit U> DataSize<T> &operator op##=(const DataSize<U> &rhs) {   \
+    uint64_t converted_rhs = rhs.template convert<T>().get_value();             \
+    m_value = m_value op converted_rhs;                                         \
+    return *this;                                                               \
+  }                                                                             \
+  template <typename NumericType> DataSize<T> operator op(const NumericType & rhs) const { return DataSize<T>(m_value op rhs); }
 
-  template <DataUnit U> DataSize<T> operator-(const DataSize<U> &rhs) const {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    return DataSize<T>(m_value - converted_rhs);
-  }
-  template <DataUnit U> DataSize<T> operator*(const DataSize<U> &rhs) const {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    return DataSize<T>(m_value * converted_rhs);
-  }
+  DEFINE_ARITHMETIC_OPERATOR(+)
+  DEFINE_ARITHMETIC_OPERATOR(-)
+  DEFINE_ARITHMETIC_OPERATOR(*)
+  DEFINE_ARITHMETIC_OPERATOR(/)
+  DEFINE_ARITHMETIC_OPERATOR(%)
 
-  template <DataUnit U> DataSize<T> operator/(const DataSize<U> &rhs) const {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    return DataSize<T>(m_value / converted_rhs);
-  }
+#undef DEFINE_ARITHMETIC_OPERATOR
 
-  template <DataUnit U> DataSize<T> operator%(const DataSize<U> &rhs) const {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    return DataSize<T>(m_value % converted_rhs);
-  }
+#define DEFINE_COMPARISON_OPERATOR(op) \
+  template <DataUnit U> bool operator op(const DataSize<U> &rhs) const { return m_value op rhs.template convert<T>().get_value(); }
 
-  template <DataUnit U> DataSize<T> operator+=(const DataSize<U> &rhs) {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    m_value += converted_rhs;
-    return *this;
-  }
+  DEFINE_COMPARISON_OPERATOR(==)
+  DEFINE_COMPARISON_OPERATOR(!=)
+  DEFINE_COMPARISON_OPERATOR(<)
+  DEFINE_COMPARISON_OPERATOR(>)
+  DEFINE_COMPARISON_OPERATOR(<=)
+  DEFINE_COMPARISON_OPERATOR(>=)
 
-  template <DataUnit U> DataSize<T> operator-=(const DataSize<U> &rhs) {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    m_value -= converted_rhs;
-    return *this;
-  }
+#undef DEFINE_COMPARISON_OPERATOR
 
-  template <DataUnit U> DataSize<T> operator*=(const DataSize<U> &rhs) {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    m_value *= converted_rhs;
-    return *this;
-  }
-
-  template <DataUnit U> DataSize<T> operator/=(const DataSize<U> &rhs) {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    m_value /= converted_rhs;
-    return *this;
-  }
-
-  template <DataUnit U> DataSize<T> operator%=(const DataSize<U> &rhs) {
-    uint64_t converted_rhs = rhs.template convert<T>().get_value();
-    m_value %= converted_rhs;
-    return *this;
-  }
-  template <DataUnit U> bool operator==(const DataSize<U> &rhs) const { return m_value == rhs.template convert<T>().get_value(); }
-
-  template <DataUnit U> bool operator!=(const DataSize<U> &rhs) const { return m_value != rhs.template convert<T>().get_value(); }
-
-  template <DataUnit U> bool operator<(const DataSize<U> &rhs) const { return m_value < rhs.template convert<T>().get_value(); }
-
-  template <DataUnit U> bool operator>(const DataSize<U> &rhs) const { return m_value > rhs.template convert<T>().get_value(); }
-
-  template <DataUnit U> bool operator<=(const DataSize<U> &rhs) const { return m_value <= rhs.template convert<T>().get_value(); }
-
-  template <DataUnit U> bool operator>=(const DataSize<U> &rhs) const { return m_value >= rhs.template convert<T>().get_value(); }
+  template <DataUnit U> DataSize<U> zero() { return DataSize<U>(0); }
 
   template <DataUnit NewDataUnit> DataSize<NewDataUnit> convert() const {
     if (static_cast<uint64_t>(T) < static_cast<uint64_t>(NewDataUnit) && (m_value * static_cast<uint64_t>(T)) % static_cast<uint64_t>(NewDataUnit) != 0 && !m_allow_rounding) {
