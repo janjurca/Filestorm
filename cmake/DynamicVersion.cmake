@@ -133,6 +133,7 @@ function(dynamic_version)
   endif()
 
   if(SKIP_AUTOGENERATION)
+    message(WARNING "DynamicVersion: Skipping autogeneration of version")
     # Write the version file
     file(WRITE ${ARGS_TMP_FOLDER}/.version ${ARGS_FALLBACK_VERSION})
     file(WRITE ${ARGS_TMP_FOLDER}/.git_commit ${ARGS_FALLBACK_HASH})
@@ -195,7 +196,11 @@ function(dynamic_version)
     ${data}
     commit
   )
-
+  message(DEBUG "DynamicVersion: Computed data:\n" "  data = ${data}")
+  message(DEBUG "DynamicVersion: Computed version:\n" "  version = ${${ARGS_OUTPUT_VERSION}}")
+  message(DEBUG "DynamicVersion: Computed describe:\n" "  describe = ${${ARGS_OUTPUT_DESCRIBE}}")
+  message(DEBUG "DynamicVersion: Computed commit:\n" "  commit = ${${ARGS_OUTPUT_COMMIT}}")
+  message(DEBUG "DynamicVersion: Computed failed:\n" "  failed = ${failed}")
   # Configure targets
   if(failed)
     # If configuration failed, create dummy targets
@@ -267,7 +272,7 @@ function(get_dynamic_version)
   # (string): Fallback version FALLBACK_HASH (string): Fallback git hash. If not defined target
   # GitHash will not be created if project is not a git repo TMP_FOLDER (path): Temporary path to
   # store temporary files
-
+  message(STATUS "DynamicVersion: Entered get_dynamic_version()")
   set(ARGS_Options "")
   set(ARGS_OneValue "")
   set(ARGS_MultiValue "")
@@ -332,6 +337,7 @@ function(get_dynamic_version)
   endif()
 
   # Get version dynamically from git_archival.txt
+  message(STATUS "DynamicVersion: Trying to get version from .git_archival.txt")
   file(STRINGS ${ARGS_GIT_ARCHIVAL_FILE} describe-name REGEX "^describe-name:.*")
   if(NOT describe-name)
     # If git_archival.txt does not contain the field "describe-name:", it is ill-formed
@@ -342,8 +348,10 @@ function(get_dynamic_version)
     return()
   endif()
 
+  message(STATUS "DynamicVersion: Found describe-name-format: ${describe-name}")
   # Try to get the version tag of the form `vX.Y.Z` or `X.Y.Z` (with arbitrary suffix)
   if(describe-name MATCHES "^describe-name:[ ]?([v]?([0-9\\.]+)-([0-9]*).*)")
+    message(STATUS "DynamicVersion: Found appropriate tag in .git_archival.txt file")
     # First matched group is the full `git describe` of the latest tag Second matched group is only
     # the version, i.e. `X.Y.Z`
 
@@ -360,6 +368,10 @@ function(get_dynamic_version)
     file(WRITE ${ARGS_TMP_FOLDER}/.git_commit ${CMAKE_MATCH_1})
     message(DEBUG "DynamicVersion: Found appropriate tag in .git_archival.txt file")
   else()
+    message(
+      STATUS
+        "DynamicVersion: No appropriate tag found in .git_archival.txt file, trying to get it from git"
+    )
     # If not it has to be computed from the git archive
     find_package(Git REQUIRED)
     # Test if project is a git repository
@@ -377,19 +389,22 @@ function(get_dynamic_version)
       return()
     endif()
     # Get most recent commit hash
+    message(STATUS "DynamicVersion: Getting most recent commit hash")
     execute_process(
       COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
       WORKING_DIRECTORY ${ARGS_PROJECT_SOURCE}
       OUTPUT_VARIABLE git-hash
       OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY
     )
-    # Get version and describe-name
+
+    message(STATUS "DynamicVersion: Getting most recent tag")
     execute_process(
       COMMAND ${GIT_EXECUTABLE} describe --tags --match=v?[0-9.]* --dirty
       WORKING_DIRECTORY ${ARGS_PROJECT_SOURCE}
       OUTPUT_VARIABLE describe-name
       OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY
     )
+    message(STATUS "DynamicVersion: describe-name: ${describe-name}")
     # Match any part containing digits and periods (strips out rc and so on)
     if(NOT describe-name MATCHES "^([v]?([0-9\\.]+)-([0-9]*).*)")
       message(${error_message_type} "DynamicVersion: Version tag is ill-formatted\n"
@@ -397,11 +412,26 @@ function(get_dynamic_version)
       )
       return()
     endif()
+    message(
+      STATUS "DynamicVersion: Found appropriate tag from git. Saving it to ${ARGS_TMP_FOLDER}"
+    )
+    message(
+      STATUS
+        "DynamicVersion: CMAKE_MATCH_1: ${CMAKE_MATCH_1} CMAKE_MATCH_2: ${CMAKE_MATCH_2} CMAKE_MATCH_3: ${CMAKE_MATCH_3}"
+    )
     string(JSON data SET ${data} describe \"${CMAKE_MATCH_1}\")
     file(WRITE ${ARGS_TMP_FOLDER}/.git_describe ${CMAKE_MATCH_1})
-    string(JSON data SET ${data} version \"${CMAKE_MATCH_2}.${CMAKE_MATCH_3}\")
-    file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2}.${CMAKE_MATCH_3})
-    string(JSON data SET ${data} n_commit \"${CMAKE_MATCH_3}\")
+
+    if(NOT CMAKE_MATCH_3)
+      message(STATUS "DynamicVersion: No commits since last tag")
+      string(JSON data SET ${data} version \"${CMAKE_MATCH_2}\")
+      file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2})
+    else()
+      message(STATUS "DynamicVersion: ${CMAKE_MATCH_3} commits since last tag")
+      string(JSON data SET ${data} version \"${CMAKE_MATCH_2}.${CMAKE_MATCH_3}\")
+      file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2}.${CMAKE_MATCH_3})
+      string(JSON data SET ${data} n_commit \"${CMAKE_MATCH_3}\")
+    endif()
     file(WRITE ${ARGS_TMP_FOLDER}/.n_commit ${CMAKE_MATCH_3})
     string(JSON data SET ${data} commit \"${git-hash}\")
     file(WRITE ${ARGS_TMP_FOLDER}/.git_commit ${git-hash})
