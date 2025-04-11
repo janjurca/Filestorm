@@ -169,8 +169,7 @@ public:
   static void print() {
     std::set<Action> usedActions = getUsedActions();
     tabulate::Table table;
-    table.add_row(
-        {"Action", "Mean Throughput (MB/s)", "Min Throughput (MB/s)", "Q1 Throughput (MB/s)", "Median Throughput (MB/s)", "Q3 Throughput (MB/s)", "Max Throughput (MB/s)", "Stddev Throughput (MB/s)"});
+    table.add_row({"Action", "Mean (MB/s)", "Min (MB/s)", "Q1 (MB/s)", "Median (MB/s)", "Q3 (MB/s)", "Max (MB/s)", "Stddev (MB/s)"});
 
     for (const auto& action : usedActions) {
       std::vector<Result> actionResults = getActionResults(action);
@@ -180,12 +179,18 @@ public:
 
       Statistics<double> stats_throughput = getStatistics<double>(actionResults, "throughput");
 
-      table.add_row({actionToString(action), std::to_string(stats_throughput.mean / (1024 * 1024)), std::to_string(stats_throughput.min / (1024 * 1024)),
-                     std::to_string(stats_throughput.q1 / (1024 * 1024)), std::to_string(stats_throughput.median / (1024 * 1024)), std::to_string(stats_throughput.q3 / (1024 * 1024)),
-                     std::to_string(stats_throughput.max / (1024 * 1024)), std::to_string(stats_throughput.stddev / (1024 * 1024))});
+      auto formatNumber = [](double value) {
+        std::ostringstream stream;
+        stream << std::fixed << std::setprecision(2) << value;
+        return stream.str();
+      };
+
+      table.add_row({actionToString(action), formatNumber(stats_throughput.mean / (1024 * 1024)), formatNumber(stats_throughput.min / (1024 * 1024)), formatNumber(stats_throughput.q1 / (1024 * 1024)),
+                     formatNumber(stats_throughput.median / (1024 * 1024)), formatNumber(stats_throughput.q3 / (1024 * 1024)), formatNumber(stats_throughput.max / (1024 * 1024)),
+                     formatNumber(stats_throughput.stddev / (1024 * 1024))});
     }
 
-    table.format().font_align(tabulate::FontAlign::center).border_top("=").border_bottom("=").border_left("|").border_right("|");
+    table.format().font_align(tabulate::FontAlign::center).border_left("|").border_right("|");
 
     std::cout << table << std::endl;
   }
