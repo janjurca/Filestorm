@@ -1,5 +1,5 @@
 ignore:
   - "test"
-
+  - "include/filestorm/external"
 comment:
   require_changes: true
