@@ -22,9 +22,9 @@ mkfs_cmds=(
     "mkfs.xfs $DRIVE -f -i sparse=0"
     "mkfs.xfs $DRIVE -f -i sparse=0 -d agcount=32"
     "mkfs.ext4 $DRIVE"
-    "mkfs.ext4 -b 8192 $DRIVE"
-    "mkfs.ext4 -I 256 $DRIVE"
-    "mkfs.ext4 -b 8192 -I 256 $DRIVE"
+    "mkfs.ext4 -b 8192 $DRIVE -F"
+    "mkfs.ext4 -I 256 $DRIVE -F"
+    "mkfs.ext4 -b 8192 -I 256 $DRIVE -F"
 )
 
 FILESTORM_CMDS=(
@@ -75,7 +75,7 @@ for filestorm_cmd in "${FILESTORM_CMDS[@]}"; do
         for fio_cmd in "${FIO_CMDS[@]}"; do
             # Run fio
             echo "Running: $fio_cmd"
-            $fio_cmd > ~/tests/$i/fio_$fio_counter.log || { echo "Error: $fio_cmd failed."; continue; }
+            $fio_cmd > ~/tests/$i/fio_$fio_counter.log 2>&1 || { echo "Error: $fio_cmd failed."; continue; }
             # Log the command execution
             echo "fio: $fio_cmd" >> ~/tests/$i/cmd.txt
             fio_counter=$((fio_counter + 1))

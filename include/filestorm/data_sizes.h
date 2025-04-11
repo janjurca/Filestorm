@@ -61,6 +61,12 @@ public:
 
 #undef DEFINE_COMPARISON_OPERATOR
 
+  explicit operator uint64_t() const { return m_value; }
+  explicit operator double() const { return static_cast<double>(m_value); }
+  explicit operator int64_t() const { return static_cast<int64_t>(m_value); }
+  explicit operator int() const { return static_cast<int>(m_value); }
+  explicit operator bool() const { return m_value != 0; }
+
   template <DataUnit U> DataSize<U> zero() { return DataSize<U>(0); }
 
   template <DataUnit NewDataUnit> DataSize<NewDataUnit> convert() const {

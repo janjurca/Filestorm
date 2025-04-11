@@ -50,6 +50,8 @@ void Scenario::save() {
   Result::save(filename);
 }
 
+void Scenario::print() { Result::print(); }
+
 Parameter Scenario::getParameter(const std::string& name) const {
   for (auto parameter : parameters()) {
     if (parameter.long_name() == name) {

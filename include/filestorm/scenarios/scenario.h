@@ -68,6 +68,7 @@ public:
   Parameter getParameter(const std::string& name) const;
   virtual void run();
   virtual void save();
+  virtual void print();
 };
 
 class BasicScenario : public Scenario {

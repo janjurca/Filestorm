@@ -79,6 +79,7 @@ auto main(int argc, char** argv) -> int {
     scenario->run();
     std::signal(SIGINT, SIG_DFL);
     scenario->save();
+    scenario->print();
   } catch (const BadScenarioSelected& e) {
     logger.error("Error on main: {}", e.what());
     return 1;

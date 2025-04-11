@@ -554,8 +554,8 @@ void AgingScenario::run() {
     file_count++;
     total_extents += file->getExtents().size();
   }
-  logger.info("File count: {}, total extents: {}", file_count, total_extents);
   logger.set_progress_bar(nullptr);
+  logger.info("File count: {}, total extents: {}", file_count, total_extents);
   // cleanup
   for (auto& file : tree.all_files) {
     std::filesystem::remove(file->path(true));

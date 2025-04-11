@@ -6,9 +6,23 @@
 #include <filestorm/utils/logger.h>
 
 #include <chrono>
+#include <filestorm/external/tabulate.hpp>
+#include <filesystem>
 #include <fstream>
+#include <map>
 #include <nlohmann/json.hpp>
+#include <set>
 #include <vector>
+
+template <typename T> struct Statistics {
+  T min;
+  T max;
+  T mean;
+  T median;
+  T stddev;
+  T q1;
+  T q3;
+};
 
 class Result {
 public:
@@ -52,6 +66,12 @@ public:
   std::chrono::nanoseconds getDuration() const { return _duration; }
   int64_t getExtentsCount() const { return _total_extents_count; }
   int64_t getFileExtentCount() const { return _file_extent_count; }
+  DataSize<DataUnit::B> getThroughput() const {
+    if (_duration.count() == 0) {
+      return DataSize<DataUnit::B>(0);
+    }
+    return DataSize<DataUnit::B>(((double)_size.get_value()) / ((double)_duration.count() / 1'000'000'000.0));
+  }
 
   // setters
   void setIteration(int iteration) { _iteration = iteration; }
@@ -134,6 +154,89 @@ public:
       file << jsonResults.dump(2);
       file.close();
     }
+  }
+
+  static void clear() { results.clear(); }
+
+  static std::set<Action> getUsedActions() {
+    std::set<Action> usedActions;
+    for (const auto& result : results) {
+      usedActions.insert(result.getAction());
+    }
+    return usedActions;
+  }
+
+  static void print() {
+    std::set<Action> usedActions = getUsedActions();
+    tabulate::Table table;
+    table.add_row(
+        {"Action", "Mean Throughput (MB/s)", "Min Throughput (MB/s)", "Q1 Throughput (MB/s)", "Median Throughput (MB/s)", "Q3 Throughput (MB/s)", "Max Throughput (MB/s)", "Stddev Throughput (MB/s)"});
+
+    for (const auto& action : usedActions) {
+      std::vector<Result> actionResults = getActionResults(action);
+      if (actionResults.empty()) {
+        continue;
+      }
+
+      Statistics<double> stats_throughput = getStatistics<double>(actionResults, "throughput");
+
+      table.add_row({actionToString(action), std::to_string(stats_throughput.mean / (1024 * 1024)), std::to_string(stats_throughput.min / (1024 * 1024)),
+                     std::to_string(stats_throughput.q1 / (1024 * 1024)), std::to_string(stats_throughput.median / (1024 * 1024)), std::to_string(stats_throughput.q3 / (1024 * 1024)),
+                     std::to_string(stats_throughput.max / (1024 * 1024)), std::to_string(stats_throughput.stddev / (1024 * 1024))});
+    }
+
+    table.format().font_align(tabulate::FontAlign::center).border_top("=").border_bottom("=").border_left("|").border_right("|");
+
+    std::cout << table << std::endl;
+  }
+
+  static std::vector<Result> getActionResults(Action action) {
+    std::vector<Result> actionResults;
+    for (const auto& result : results) {
+      if (result.getAction() == action) {
+        actionResults.push_back(result);
+      }
+    }
+    return actionResults;
+  }
+
+  template <typename T> static Statistics<T> getStatistics(std::vector<Result> results, std::string unit) {
+    std::vector<T> data;
+    for (const auto& result : results) {
+      if (unit == "duration") {
+        data.push_back(static_cast<T>(result.getDuration().count()));
+      } else if (unit == "throughput") {
+        DataSize<DataUnit::B> throughput = result.getThroughput();
+        data.push_back(static_cast<T>(throughput.get_value()));
+      } else {
+        throw std::runtime_error("Unknown unit");
+      }
+    }
+    if (data.empty()) {
+      throw std::runtime_error("No data for the given action");
+    }
+    Statistics<T> stats = getStatistics(data);
+    return stats;
+  }
+
+  template <typename T> static Statistics<T> getStatistics(std::vector<T> data) {
+    Statistics<T> stats;
+    if (data.empty()) {
+      throw std::runtime_error("No data for the given action");
+    }
+    std::sort(data.begin(), data.end());
+    stats.min = data.front();
+    stats.max = data.back();
+    stats.mean = std::accumulate(data.begin(), data.end(), static_cast<T>(0)) / data.size();
+    stats.median = (data.size() % 2 == 0) ? (data[data.size() / 2 - 1] + data[data.size() / 2]) / 2 : data[data.size() / 2];
+    T sum = T(0);
+    for (const auto& data_item : data) {
+      sum += (data_item - stats.mean) * (data_item - stats.mean);
+    }
+    stats.stddev = std::sqrt((static_cast<double>(sum)) / static_cast<double>(data.size()));
+    stats.q1 = data[data.size() / 4];
+    stats.q3 = data[3 * data.size() / 4];
+    return stats;
   }
 };
 
