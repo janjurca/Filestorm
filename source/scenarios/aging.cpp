@@ -3,7 +3,8 @@
 #include <filestorm/data_sizes.h>
 #include <filestorm/filetree.h>
 #include <filestorm/result.h>
-#include <filestorm/scenarios/scenario.h>
+#include <filestorm/scenarios/aging.h>
+#include <filestorm/scenarios/register.h>
 #include <filestorm/utils.h>
 #include <filestorm/utils/fs.h>
 #include <filestorm/utils/logger.h>
@@ -27,7 +28,7 @@
 AgingScenario::AgingScenario() {
   _name = "aging";
   _description = "Scenario for testing filesystem aging.";
-  addParameter(Parameter("d", "directory", "", "/tmp/filestorm/"));
+  addParameter(Parameter("d", "directory", "Set the target directory where the testing will be performed", "/tmp/filestorm/"));
   addParameter(Parameter("r", "depth", "Max directory depth", "5"));
   addParameter(Parameter("n", "ndirs", "Max number of dirs", "200"));
   addParameter(Parameter("m", "fs-capacity", "Max overall filesystem size", "full"));  // TODO: add support for this
@@ -159,6 +160,7 @@ void AgingScenario::run() {
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
+
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size.get_value();) {
             ssize_t _written_bytes = write(fd, line.get(), block_size);
