@@ -1,6 +1,7 @@
 #include <filestorm/actions/actions.h>
 #include <filestorm/actions/rw_actions.h>
 #include <filestorm/data_sizes.h>
+#include <filestorm/ioengines/factory.h>
 #include <filestorm/utils/logger.h>
 #include <filestorm/version.h>
 #include <getopt.h>
@@ -18,8 +19,13 @@
 void displayHelp() {
   std::cout << "Usage: filestorm SCENARIO\n"
             << "  SCENARIO: The scenario to run, available:" << std::endl;
-  for (const auto& scenario : config.get_supported_scenarios()) {
-    std::cout << "    " << scenario->name() << " - " << scenario->description() << std::endl;
+  for (const auto& scenario : Config::instance().listScenarios()) {
+    auto scenario_ptr = Config::instance().createScenario(scenario);
+    if (!scenario_ptr) {
+      std::cerr << "Error creating scenario: " << scenario << std::endl;
+      continue;
+    }
+    std::cout << "    " << scenario_ptr->name() << " - " << scenario_ptr->description() << std::endl;
   }
   std::cout << "Options:\n"
             << "  -h, --help     Display this help message\n"
@@ -70,7 +76,7 @@ auto main(int argc, char** argv) -> int {
   }
   std::string positionalArgument = argv[optind];
   try {
-    auto scenario = config.get_and_set_scenario(positionalArgument);
+    auto scenario = Config::instance().createScenario(positionalArgument);
     int new_argc = argc - optind;
     char** new_argv = argv + optind;
 

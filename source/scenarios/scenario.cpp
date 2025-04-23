@@ -1,3 +1,4 @@
+#include <filestorm/ioengines/factory.h>
 #include <filestorm/result.h>
 #include <filestorm/scenarios/scenario.h>
 #include <filestorm/utils/logger.h>
@@ -5,10 +6,10 @@
 
 #include <filestorm/external/cxxopts.hpp>
 #include <iostream>
-
 Scenario::Scenario() {
   addParameter(Parameter("h", "help", "Show help", "false", false));
   addParameter(Parameter("", "save-to", "Save results to a file", "results.json", true));
+  // addParameter(Parameter("", "engine", fmt::format("I/O engine to use available engines:\n{}", engine_list), "sync", true));
 }
 
 Scenario::~Scenario() {}
@@ -59,4 +60,19 @@ Parameter Scenario::getParameter(const std::string& name) const {
     }
   }
   throw std::invalid_argument(fmt::format("Parameter {} not found.", name));
+}
+
+void Scenario::addParameter(Parameter parameter) {
+  for (auto& p : _parameters) {
+    if (p.long_name() == parameter.long_name() || (p.short_name() == parameter.short_name() && !p.short_name().empty())) {
+      throw std::invalid_argument(fmt::format("Parameter {} already exists.", parameter.long_name()));
+    }
+  }
+  if (parameter.long_name().empty()) {
+    logger.warn("Parameter long name should not be empty.");
+  }
+  if (parameter.description().empty()) {
+    logger.warn("Parameter description should not be empty.");
+  }
+  _parameters.push_back(parameter);
 }

@@ -2,7 +2,7 @@
 #include <filestorm/actions/rw_actions.h>
 #include <filestorm/data_sizes.h>
 #include <filestorm/result.h>
-#include <filestorm/scenarios/scenario.h>
+#include <filestorm/scenarios/basic.h>
 #include <filestorm/utils/logger.h>
 #include <spdlog/spdlog.h>
 

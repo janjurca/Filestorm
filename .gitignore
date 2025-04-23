@@ -6,3 +6,4 @@
 _CPack_Packages
 results.json*
 /gitignore/*
+/tests/*
