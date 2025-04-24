@@ -406,7 +406,7 @@ function(get_dynamic_version)
     )
     message(STATUS "DynamicVersion: describe-name: ${describe-name}")
     # Match any part containing digits and periods (strips out rc and so on)
-    if(NOT describe-name MATCHES "^([v]?([0-9\\.]+)-([0-9]*).*)")
+    if(NOT describe-name MATCHES "^([v]?([0-9\\.]+)(-([0-9]*))?.*)")
       message(${error_message_type} "DynamicVersion: Version tag is ill-formatted\n"
               "  Describe-name: ${describe-name}"
       )
