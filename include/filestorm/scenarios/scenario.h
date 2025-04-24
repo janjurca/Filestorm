@@ -4,6 +4,7 @@
 #include <filestorm/data_sizes.h>
 #include <filestorm/filefrag.h>
 #include <filestorm/filetree.h>
+#include <filestorm/ioengines/ioengine.h>
 #include <filestorm/parameter.h>
 #include <filestorm/polycurve.h>
 #include <filestorm/utils/psm.h>
@@ -27,7 +28,7 @@ public:
   void setup(int argc, char** argv);
   void addParameter(Parameter parameter);
   Parameter getParameter(const std::string& name) const;
-  virtual void run();
+  virtual void run(std::unique_ptr<IOEngine>& ioengine);
   virtual void save();
   virtual void print();
 };

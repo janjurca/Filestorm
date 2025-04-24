@@ -29,12 +29,11 @@ protected:
 
   bool rapid_aging = false;
   void compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree, PolyCurve& curve);
-  int open_file(const char* path, int flags, bool direct_io);
 
 public:
   AgingScenario();
   ~AgingScenario();
-  void run() override;
+  void run(std::unique_ptr<IOEngine>& ioengine) override;
   double CAF(double x) { return sqrt(1 - (x * x)); }
   DataSize<DataUnit::B> get_file_size();
   DataSize<DataUnit::B> get_file_size(uint64_t min, uint64_t max, bool safe = true);

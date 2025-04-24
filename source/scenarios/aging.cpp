@@ -57,7 +57,7 @@ AgingScenario::AgingScenario() {
 
 AgingScenario::~AgingScenario() {}
 
-void AgingScenario::run() {
+void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
   if (!std::filesystem::exists(getParameter("directory").get_string())) {
     if (getParameter("create-dir").get_bool()) {
       std::filesystem::create_directories(getParameter("directory").get_string());
@@ -156,24 +156,24 @@ void AgingScenario::run() {
         FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
         logger.debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
-        int fd = open_file(file_node->path(true).c_str(), O_WRONLY | O_CREAT | O_TRUNC, getParameter("direct_io").get_bool());  // add directio
+        int fd = ioengine->open_file(file_node->path(true).c_str(), O_WRONLY | O_CREAT | O_TRUNC, getParameter("direct_io").get_bool());  // add directio
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
 
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size.get_value();) {
-            ssize_t _written_bytes = write(fd, line.get(), block_size);
+            ssize_t _written_bytes = ioengine->write(fd, line.get(), block_size);
             if (written_bytes == -1) {
               perror("Error writing to file");
-              close(fd);
+              ioengine->close(fd);
               throw std::runtime_error(fmt::format("Error writing to file {}", file_node->path(true)));
             }
             written_bytes += _written_bytes;
           }
         });
         auto duration = action.exec();
-        close(fd);
+        ioengine->close(fd);
         logger.debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
                                  (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         touched_files.push_back(file_node);
@@ -190,7 +190,7 @@ void AgingScenario::run() {
         logger.debug(fmt::format("CREATE_FILE_FALLOCATE {}", file_node->path(true)));
         DataSize<DataUnit::B> file_size = get_file_size();
 
-        int fd = open_file(file_node->path(true).c_str(), O_RDWR | O_CREAT, getParameter("direct_io").get_bool());
+        int fd = ioengine->open_file(file_node->path(true).c_str(), O_RDWR | O_CREAT, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #  error "Windows is not supported"
@@ -205,7 +205,7 @@ void AgingScenario::run() {
 #endif
         });
         auto duration = action.exec();
-        close(fd);
+        ioengine->close(fd);
         logger.debug(fmt::format("CREATE_FILE_FALLOCATE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
                                  (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         touched_files.push_back(file_node);
@@ -227,20 +227,20 @@ void AgingScenario::run() {
         std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
         generate_random_chunk(line.get(), block_size);
-        int fd = open_file(prev_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
+        int fd = ioengine->open_file(prev_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size;) {
-            ssize_t written_bytes_ = write(fd, line.get(), block_size);
+            ssize_t written_bytes_ = ioengine->write(fd, line.get(), block_size);
             if (written_bytes == -1) {
               perror("Error writing to file");
-              close(fd);
+              ioengine->close(fd);
               throw std::runtime_error(fmt::format("Error writing to file {}", prev_file_path));
             }
             written_bytes += written_bytes_;
           }
         });
         auto duration = action.exec();
-        close(fd);
+        ioengine->close(fd);
         logger.debug(fmt::format("CREATE_FILE_OVERWRITE {} Wrote {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0,
                                  (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0)));
 
@@ -258,16 +258,16 @@ void AgingScenario::run() {
         auto prev_file_path = prev_file->path(true);
         auto file_size = fs_utils::file_size(prev_file_path);
         logger.debug("CREATE_FILE_READ {} size {}", prev_file_path, file_size);
-        int fd = open_file(prev_file_path.c_str(), O_RDONLY, getParameter("direct_io").get_bool());
+        int fd = ioengine->open_file(prev_file_path.c_str(), O_RDONLY, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
           std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
           size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
           for (uint64_t read_bytes = 0; read_bytes < file_size; read_bytes += block_size) {
-            read(fd, line.get(), block_size);
+            ioengine->read(fd, line.get(), block_size);
           }
         });
         auto duration = action.exec();
-        close(fd);
+        ioengine->close(fd);
         logger.debug(fmt::format("CREATE_FILE_READ {} Read {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0,
                                  (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0)));
         result.setAction(Result::Action::CREATE_FILE_READ);
@@ -330,17 +330,17 @@ void AgingScenario::run() {
         auto random_file = tree.randomPunchableFile();
         auto random_file_path = random_file->path(true);
         auto block_size = get_block_size().convert<DataUnit::B>().get_value();
-        std::tuple<size_t, size_t> hole_adress = random_file->getHoleAddress(block_size, true);
+        std::tuple<size_t, size_t> hole_address = random_file->getHoleAddress(block_size, true);
         // Round to modulo blocksize
-        logger.debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_adress), std::get<1>(hole_adress));
+        logger.debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_address), std::get<1>(hole_address));
+        int fd = ioengine->open_file(random_file_path.c_str(), O_RDWR, false);
+        if (fd == -1) {
+          std::cerr << "Error opening file: " << strerror(errno) << std::endl;
+          throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
+        }
         MeasuredCBAction action([&]() {
-          int fd = open(random_file_path.c_str(), O_RDWR);
-          if (fd == -1) {
-            std::cerr << "Error opening file: " << strerror(errno) << std::endl;
-            throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
-          }
-          fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, std::get<0>(hole_adress), std::get<1>(hole_adress) - std::get<0>(hole_adress));
-          close(fd);
+          fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, std::get<0>(hole_address), std::get<1>(hole_address) - std::get<0>(hole_address));
+          ioengine->close(fd);
         });
         touched_files.push_back(random_file);
         auto duration = action.exec();
@@ -350,7 +350,7 @@ void AgingScenario::run() {
         }
         result.setAction(Result::Action::ALTER_SMALLER_FALLOCATE);
         result.setPath(random_file_path);
-        result.setSize(DataSize<DataUnit::B>(std::get<1>(hole_adress) - std::get<0>(hole_adress)));
+        result.setSize(DataSize<DataUnit::B>(std::get<1>(hole_address) - std::get<0>(hole_address)));
         result.setDuration(duration);
 #else
         throw std::runtime_error("FALLOCATE not supported on this system");
@@ -368,7 +368,7 @@ void AgingScenario::run() {
         auto actual_file_size = fs_utils::file_size(random_file_path);
         auto new_file_size = get_file_size(actual_file_size, DataSize<DataUnit::B>::fromString(getParameter("maxfsize").get_string()).convert<DataUnit::B>().get_value());
         logger.debug("ALTER_BIGGER_FALLOCATE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
-        int fd = open_file(random_file_path.c_str(), O_RDWR, getParameter("direct_io").get_bool());
+        int fd = ioengine->open_file(random_file_path.c_str(), O_RDWR, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #  error "Windows is not supported"
@@ -386,7 +386,7 @@ void AgingScenario::run() {
             logger.warn("File {} is already bigger than new size", random_file_path);
           }
 #endif
-          close(fd);
+          ioengine->close(fd);
         });
         auto duration = action.exec();
         touched_files.push_back(random_file);
@@ -425,7 +425,7 @@ void AgingScenario::run() {
         logger.debug("ALTER_BIGGER_WRITE {} from {} to {}", random_file_path, actual_file_size, new_file_size);
 
         // Open file without O_APPEND (O_APPEND conflicts with O_DIRECT)
-        int fd = open_file(random_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
+        int fd = ioengine->open_file(random_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
         if (fd == -1) {
           perror("Error opening file with O_DIRECT");
           free(buf);
@@ -435,7 +435,7 @@ void AgingScenario::run() {
         auto current_size = lseek(fd, 0, SEEK_END);
         if (current_size == -1) {
           perror("Error getting file size");
-          close(fd);
+          ioengine->close(fd);
           free(buf);
           throw std::runtime_error(fmt::format("Error getting file size {}", random_file_path));
         }
@@ -453,13 +453,13 @@ void AgingScenario::run() {
             ssize_t written_bytes_ = pwrite(fd, buf, block_size, write_offset);
             if (written_bytes_ == -1) {
               perror("Error writing to file");
-              close(fd);
+              ioengine->close(fd);
               free(buf);
               throw std::runtime_error(fmt::format("Error writing to file {}", random_file_path));
             }
             write_offset += written_bytes_;
           }
-          close(fd);
+          ioengine->close(fd);
         });
 
         auto duration = action.exec();
@@ -686,34 +686,4 @@ DataSize<DataUnit::B> AgingScenario::get_file_size() {
   auto fsize = get_file_size(min_size.get_value(), max_size.get_value());
   // logger.debug("get_file_size: {} - {} : {} ", min_size.get_value(), max_size.get_value(), fsize.get_value());
   return fsize;
-}
-
-int AgingScenario::open_file(const char* path, int flags, bool direct_io) {
-  int fd;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-#  error "Windows is not supported"
-#elif __APPLE__
-  fd = open(path, flags, S_IRWXU);
-  if (direct_io && fd != -1) {
-    if (fcntl(fd, F_NOCACHE, 1) == -1) {
-      close(fd);
-      throw std::runtime_error("WriteMonitoredAction::work: error on fcntl F_NOCACHE");
-    }
-  }
-#elif __linux__ || __unix__ || defined(_POSIX_VERSION)
-  if (direct_io) {
-    flags |= O_DIRECT;
-  }
-  fd = open(path, flags, S_IRWXU);
-#else
-#  error "Unknown system"
-#endif
-  if (fd == -1) {
-    std::cerr << "Error opening file: " << strerror(errno) << std::endl;
-    if (errno == EINVAL) {
-      throw std::runtime_error("Error: Direct IO not supported");
-    }
-    throw std::runtime_error(fmt::format("Error opening file {}", path));
-  }
-  return fd;
 }
