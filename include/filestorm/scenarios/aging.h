@@ -34,7 +34,7 @@ protected:
 public:
   AgingScenario();
   ~AgingScenario();
-  void run() override;
+  void run(std::unique_ptr<IOEngine>& ioengine) override;
   double CAF(double x) { return sqrt(1 - (x * x)); }
   DataSize<DataUnit::B> get_file_size();
   DataSize<DataUnit::B> get_file_size(uint64_t min, uint64_t max, bool safe = true);

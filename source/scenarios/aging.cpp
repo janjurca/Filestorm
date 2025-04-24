@@ -57,7 +57,7 @@ AgingScenario::AgingScenario() {
 
 AgingScenario::~AgingScenario() {}
 
-void AgingScenario::run() {
+void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
   if (!std::filesystem::exists(getParameter("directory").get_string())) {
     if (getParameter("create-dir").get_bool()) {
       std::filesystem::create_directories(getParameter("directory").get_string());
