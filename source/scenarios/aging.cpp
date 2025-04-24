@@ -333,7 +333,7 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         std::tuple<size_t, size_t> hole_address = random_file->getHoleAddress(block_size, true);
         // Round to modulo blocksize
         logger.debug("ALTER_SMALLER_FALLOCATE {} with size {} punched hole {} - {}", random_file_path, random_file->size(), std::get<0>(hole_address), std::get<1>(hole_address));
-        int fd = ioengine->open_file(random_file_path.c_str(), O_RDWR);
+        int fd = ioengine->open_file(random_file_path.c_str(), O_RDWR, false);
         if (fd == -1) {
           std::cerr << "Error opening file: " << strerror(errno) << std::endl;
           throw std::runtime_error(fmt::format("Error opening file {}", random_file_path));
