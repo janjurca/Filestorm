@@ -35,6 +35,7 @@ srpm:
 		cp $$rpmfile $(outdir); \
 	done
 
-.PHONY: clean
 clean:
 	rm -rf build
+
+.PHONY: clean srpm
