@@ -164,7 +164,7 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size.get_value();) {
             ssize_t _written_bytes = ioengine->write(fd, line.get(), block_size);
-            if (written_bytes == -1) {
+            if (written_bytes == -1UL) {
               perror("Error writing to file");
               ioengine->close(fd);
               throw std::runtime_error(fmt::format("Error writing to file {}", file_node->path(true)));
@@ -231,7 +231,7 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         MeasuredCBAction action([&]() {
           for (uint64_t written_bytes = 0; written_bytes < file_size;) {
             ssize_t written_bytes_ = ioengine->write(fd, line.get(), block_size);
-            if (written_bytes == -1) {
+            if (written_bytes == -1UL) {
               perror("Error writing to file");
               ioengine->close(fd);
               throw std::runtime_error(fmt::format("Error writing to file {}", prev_file_path));

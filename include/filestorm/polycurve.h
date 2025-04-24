@@ -65,9 +65,9 @@ private:
   std::vector<float> y_subsample_buffer;
 
   int poly_degree;         // Degree of the polynomial to be fitted.
+  int subsampling;         // How many points to average before adding a new point.
   Eigen::VectorXd coeffs;  // Polynomial coefficients (from constant term to highest degree).
   bool fitted;             // Flag indicating whether the current coefficients are up-to-date.
-  int subsampling;         // How many points to average before adding a new point.
 
   float maximum_value = 0;
   // Helper function to compute the average of the values in a vector.
