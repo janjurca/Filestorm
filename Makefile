@@ -33,4 +33,4 @@ build-with-cpm:
 	cmake -S . -B build -DUSE_CPM=1
 	cmake --build build
 
-.PHONY: all clean tests rpm run cmake build srpm
+.PHONY: all clean tests rpm run cmake build srpm build-with-cpm
