@@ -417,7 +417,7 @@ function(get_dynamic_version)
     )
     message(
       STATUS
-        "DynamicVersion: CMAKE_MATCH_1: ${CMAKE_MATCH_1} CMAKE_MATCH_2: ${CMAKE_MATCH_2} CMAKE_MATCH_3: ${CMAKE_MATCH_3}"
+        "DynamicVersion: CMAKE_MATCH_1: ${CMAKE_MATCH_1} CMAKE_MATCH_2: ${CMAKE_MATCH_2} CMAKE_MATCH_3: ${CMAKE_MATCH_3}  CMAKE_MATCH_4: ${CMAKE_MATCH_4}"
     )
     string(JSON data SET ${data} describe \"${CMAKE_MATCH_1}\")
     file(WRITE ${ARGS_TMP_FOLDER}/.git_describe ${CMAKE_MATCH_1})
@@ -428,8 +428,8 @@ function(get_dynamic_version)
       file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2})
     else()
       message(STATUS "DynamicVersion: ${CMAKE_MATCH_3} commits since last tag")
-      string(JSON data SET ${data} version \"${CMAKE_MATCH_2}${CMAKE_MATCH_3}\")
-      file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2}${CMAKE_MATCH_3})
+      string(JSON data SET ${data} version \"${CMAKE_MATCH_2}.${CMAKE_MATCH_4}\")
+      file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2}.${CMAKE_MATCH_4})
       string(JSON data SET ${data} n_commit \"${CMAKE_MATCH_3}\")
     endif()
     file(WRITE ${ARGS_TMP_FOLDER}/.n_commit ${CMAKE_MATCH_3})
