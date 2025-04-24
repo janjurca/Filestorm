@@ -87,7 +87,7 @@ auto main(int argc, char** argv) -> int {
   }
   std::string engineName = argv[optind++];
   if (std::find(engineNames.begin(), engineNames.end(), engineName) == engineNames.end()) {
-    logger.error("Unknown IO engine “{}”", engineName);
+    logger.error("Unknown IO engine \"{}\"", engineName);
     displayHelp();
     return 1;
   }
