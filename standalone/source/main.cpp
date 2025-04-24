@@ -118,7 +118,7 @@ auto main(int argc, char** argv) -> int {
   }
   std::string scenarioName = argv[optind++];
   if (std::find(scenarioNames.begin(), scenarioNames.end(), scenarioName) == scenarioNames.end()) {
-    logger.error("Unknown scenario “{}”", scenarioName);
+    logger.error("Unknown scenario \"{}\"", scenarioName);
     return 1;
   }
   std::vector<char*> scenarioArgv;
