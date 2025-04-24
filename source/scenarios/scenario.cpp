@@ -16,7 +16,7 @@ Scenario::~Scenario() {}
 
 void Scenario::setup(int argc, char** argv) {
   cxxopts::Options options("filestorm", fmt::format("Scenario: {}", name()));
-  options.custom_help(fmt::format("{} [Options...]", name()));
+  options.custom_help(fmt::format("IOENGINE {} [Options...]", name()));
   for (auto parameter : parameters()) {
     if (parameter.has_value())
       if (parameter.short_name().empty())
@@ -43,7 +43,7 @@ void Scenario::setup(int argc, char** argv) {
   }
 }
 
-void Scenario::run() {}
+void Scenario::run(std::unique_ptr<IOEngine>& ioengine) {}
 
 void Scenario::save() {
   auto filename = getParameter("save-to").get_string();

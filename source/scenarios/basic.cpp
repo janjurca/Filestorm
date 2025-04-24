@@ -19,7 +19,7 @@ BasicScenario::BasicScenario() {
 
 BasicScenario::~BasicScenario() {}
 
-void BasicScenario::run() {
+void BasicScenario::run(std::unique_ptr<IOEngine>& ioengine) {
   std::cout << "Running basic scenario" << std::endl;
   auto attributes = FileActionAttributes(true, DataSize<DataUnit::B>::fromString(getParameter("blocksize").get_string()), DataSize<DataUnit::KB>::fromString(getParameter("filesize").get_string()),
                                          getParameter("filename").get_string(), stringToChrono(getParameter("time").get_string()));

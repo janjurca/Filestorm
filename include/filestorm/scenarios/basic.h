@@ -7,7 +7,7 @@ class BasicScenario : public Scenario {
 public:
   BasicScenario();
   ~BasicScenario();
-  void run() override;
+  void run(std::unique_ptr<IOEngine>& ioengine) override;
   void save() override;
 };
 
