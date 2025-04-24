@@ -8,8 +8,14 @@ public:
   SyncIOEngine();
   std::string name() const override { return "sync"; }
   std::string description() const override { return "POSIX synchronous I/O engine"; }
-  void read() override { std::cout << "[POSIX] Reading\n"; }
-  void write() override { std::cout << "[POSIX] Writing\n"; }
+  ssize_t read(int fd, void* buf, size_t count) override { return ::read(fd, buf, count); }
+  ssize_t write(int fd, const void* buf, size_t count) override { return ::write(fd, buf, count); }
+  void sync(int fd) override {
+    if (fsync(fd) == -1) {
+      perror("Error syncing file");
+      throw std::runtime_error("Error syncing file");
+    }
+  }
 };
 REGISTER_IO_ENGINE(SyncIOEngine);
 
