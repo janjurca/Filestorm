@@ -35,10 +35,11 @@ if(USE_CPM)
     VERSION 1.14.1
   )
   CPMAddPackage(
-    NAME Eigen3
-    GIT_REPOSITORY "https://gitlab.com/libeigen/eigen"
-    GIT_TAG "3.3.3" TRUE
+    GITLAB_REPOSITORY libeigen/eigen
+    GIT_TAG 3.4.0
+    OPTIONS "EIGEN_BUILD_DOC OFF" "EIGEN_BUILD_PKGCONFIG OFF" "EIGEN_BUILD_DOC OFF"
   )
+
 else()
   find_package(fmt REQUIRED)
   find_package(spdlog REQUIRED)
