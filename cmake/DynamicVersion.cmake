@@ -422,7 +422,7 @@ function(get_dynamic_version)
     string(JSON data SET ${data} describe \"${CMAKE_MATCH_1}\")
     file(WRITE ${ARGS_TMP_FOLDER}/.git_describe ${CMAKE_MATCH_1})
 
-    if(NOT CMAKE_MATCH_3)
+    if(NOT CMAKE_MATCH_4)
       message(STATUS "DynamicVersion: No commits since last tag")
       string(JSON data SET ${data} version \"${CMAKE_MATCH_2}\")
       file(WRITE ${ARGS_TMP_FOLDER}/.version ${CMAKE_MATCH_2})
