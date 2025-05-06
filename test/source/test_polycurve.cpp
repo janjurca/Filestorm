@@ -72,6 +72,7 @@ TEST_CASE("Adding points with subsampling > 1") {
   curve.fitPolyCurve();  // degree 0: constant fit; should give value 4.
   float val = curve.evaluate(0.0f);
   CHECK(val == doctest::Approx(4.0f));
+  CHECK(curve.isFitted() == true);
 }
 
 TEST_CASE("Point removal functions: popOldestPoint, popOldestPoints, clearPoints") {
