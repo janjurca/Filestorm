@@ -3,12 +3,10 @@ name: MacOS
 on:
   push:
     branches:
-      - master
-      - main
+      - '**'
   pull_request:
     branches:
-      - master
-      - main
+      - '**'
 
 env:
   CTEST_OUTPUT_ON_FAILURE: 1
