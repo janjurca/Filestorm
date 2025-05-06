@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: install_dependencies
         run: |
-          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel
+          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel libaio-devel
 
       - uses: actions/checkout@v4
         with:
@@ -44,7 +44,7 @@ jobs:
     steps:
       - name: install_dependencies
         run: |
-          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel
+          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel libaio-devel
 
       - uses: actions/checkout@v4
         with:
