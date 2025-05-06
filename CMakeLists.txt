@@ -60,26 +60,25 @@ endif()
 
 # ---- Collect sources ----
 
-file(GLOB_RECURSE common_headers "${CMAKE_SOURCE_DIR}/include/*.h")
-file(GLOB_RECURSE all_sources CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/source/*.cpp")
+file(GLOB_RECURSE common_headers "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
+file(GLOB_RECURSE all_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
 list(FILTER all_sources EXCLUDE REGEX ".*/ioengines/engines/.*")
 set(common_sources ${all_sources})
 
 set(engine_sources "")
 
 if(ENABLE_SYNC)
-  list(APPEND engine_sources "${CMAKE_SOURCE_DIR}/source/ioengines/engines/sync.cpp")
+  list(APPEND engine_sources "${CMAKE_CURRENT_SOURCE_DIR}/source/ioengines/engines/sync.cpp")
 endif()
 if(ENABLE_LIBAIO)
   find_library(LIBAIO_LIB aio REQUIRED)
   link_libraries(${LIBAIO_LIB})
-  list(APPEND engine_sources "${CMAKE_SOURCE_DIR}/source/ioengines/engines/libaio.cpp")
+  list(APPEND engine_sources "${CMAKE_CURRENT_SOURCE_DIR}/source/ioengines/engines/libaio.cpp")
 endif()
 if(ENABLE_IOURING)
   find_library(IOURING_LIB uring REQUIRED)
   link_libraries(${IOURING_LIB})
-
-  list(APPEND engine_sources "${CMAKE_SOURCE_DIR}/source/ioengines/engines/iouring.cpp")
+  list(APPEND engine_sources "${CMAKE_CURRENT_SOURCE_DIR}/source/ioengines/engines/iouring.cpp")
 endif()
 
 # ---- Build filestorm object library ----
@@ -102,7 +101,7 @@ else()
 endif()
 
 target_include_directories(
-  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                          $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
 
@@ -123,7 +122,7 @@ packageProject(
   VERSION ${PROJECT_VERSION}
   NAMESPACE ${PROJECT_NAME}
   BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include
+  INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${PROJECT_NAME}/version.h"
   COMPATIBILITY SameMajorVersion
@@ -132,7 +131,9 @@ packageProject(
 
 # ---- Standalone executable ----
 
-file(GLOB standalone_sources CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/standalone/source/*.cpp")
+file(GLOB standalone_sources CONFIGURE_DEPENDS
+     "${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp"
+)
 
 add_executable(${PROJECT_NAME}Executable ${standalone_sources})
 set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "filestorm")
