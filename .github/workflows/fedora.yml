@@ -63,8 +63,29 @@ jobs:
       - name: configure
         run: make tests
 
+  srpm:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: install_dependencies
+        run: |
+          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel libaio-devel liburing-devel
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: "true"
+          fetch-depth: 0
+
+      - name: git safe
+        run: | 
+          git config --global --add safe.directory /__w/Filestorm/Filestorm
+          
+      - name: configure
+        run: make srpm
+
+
   trigger-copr-build:
-    needs: [build, tests]
+    needs: [build, tests, srpm]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && success()
     steps:
@@ -73,7 +94,7 @@ jobs:
           curl -X POST -H 'Content-Type: application/json' ${{ secrets.COPR_WEBHOOK_URL }}
 
   trigger-copr-build-in-libs:
-    needs: [build, tests] 
+    needs: [build, tests, srpm] 
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && success()
     steps:
