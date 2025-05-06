@@ -26,7 +26,7 @@ option(ENABLE_SYNC "Build and link with the sync IO engine" ON)
 
 if(UNIX AND NOT APPLE)
   option(ENABLE_LIBAIO "Build and link the libaio IO engine" ON)
-  option(ENABLE_IOURING "Build and link the io_uring IO engine" ON)
+  option(ENABLE_IOURING "Build and link the io_uring IO engine" OFF)
 else()
   option(ENABLE_LIBAIO "Build and link the libaio IO engine" OFF)
   option(ENABLE_IOURING "Build and link the io_uring IO engine" OFF)
