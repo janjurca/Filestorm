@@ -21,7 +21,7 @@ std::string create_temp_file(const std::string& content) {
   if (written != static_cast<ssize_t>(content.size())) {
     throw std::runtime_error("Failed to write full content");
   }
-  return std::string(tmpl);
+  return std::string(temp_filename);
 }
 
 TEST_CASE("get_extents throws on null path") { CHECK_THROWS_AS(get_extents(nullptr), std::runtime_error); }
