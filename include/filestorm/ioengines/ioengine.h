@@ -23,8 +23,13 @@ public:
   virtual std::string name() const = 0;
   virtual std::string description() const = 0;
   virtual ssize_t read(int fd, void* buf, size_t count) = 0;
-  virtual ssize_t write(int fd, const void* buf, size_t count) = 0;
-  virtual void sync(int fd) = 0;
+  virtual ssize_t write(int fd, void* buf, size_t count) = 0;
+  virtual void sync(int fd) {
+    if (fsync(fd) == -1) {
+      perror("Error syncing file");
+      throw std::runtime_error("Error syncing file");
+    }
+  }
   virtual int close(int fp) {
     if (fp != -1) {
       return ::close(fp);
@@ -32,8 +37,17 @@ public:
     return EBADF;
   };
 
-  virtual std::vector<Parameter> parameters() const { return _parameters; };
-  virtual void addParameter(Parameter parameter) { _parameters.push_back(parameter); };
+  std::vector<Parameter> parameters() const { return _parameters; };
+  void addParameter(Parameter parameter) { _parameters.push_back(parameter); };
+
+  Parameter getParameter(const std::string& name) const {
+    for (auto parameter : parameters()) {
+      if (parameter.long_name() == name) {
+        return parameter;
+      }
+    }
+    throw std::invalid_argument(fmt::format("Parameter {} not found.", name));
+  }
 
   virtual std::string setup(int argc, char** argv) {
     cxxopts::Options options("filestorm", fmt::format("IO Engine: {}", name()));

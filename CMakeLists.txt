@@ -20,8 +20,19 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   )
 endif()
 
-# ---- Add dependencies via CPM ----
-# see https://github.com/TheLartians/CPM.cmake for more info
+# ---- Optional engines ----
+
+option(ENABLE_SYNC "Build and link with the sync IO engine" ON)
+
+if(UNIX AND NOT APPLE)
+  option(ENABLE_LIBAIO "Build and link the libaio IO engine" ON)
+  option(ENABLE_IOURING "Build and link the io_uring IO engine" ON)
+else()
+  option(ENABLE_LIBAIO "Build and link the libaio IO engine" OFF)
+  option(ENABLE_IOURING "Build and link the io_uring IO engine" OFF)
+endif()
+
+# ---- Dependencies via CPM or system ----
 
 option(USE_CPM "Use CPM for dependencies" OFF)
 
@@ -47,17 +58,33 @@ else()
   find_package(Eigen3 REQUIRED)
 endif()
 
-# ---- Add source files ----
+# ---- Collect sources ----
 
-# Note: globbing sources is considered bad practice as CMake's generators may not detect new files
-# automatically. Keep that in mind when changing files, or explicitly mention them here.
-file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
+file(GLOB_RECURSE common_headers "${CMAKE_SOURCE_DIR}/include/*.h")
+file(GLOB_RECURSE all_sources CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/source/*.cpp")
+list(FILTER all_sources EXCLUDE REGEX ".*/ioengines/engines/.*")
+set(common_sources ${all_sources})
 
-# ---- Create library ----
-# add_library(filestorm ${headers} ${sources}) Note: for header-only libraries change all PUBLIC
-# flags to INTERFACE and create an interface target: add_library(${PROJECT_NAME} INTERFACE)
-add_library(${PROJECT_NAME} OBJECT ${headers} ${sources})
+set(engine_sources "")
+
+if(ENABLE_SYNC)
+  list(APPEND engine_sources "${CMAKE_SOURCE_DIR}/source/ioengines/engines/sync.cpp")
+endif()
+if(ENABLE_LIBAIO)
+  find_library(LIBAIO_LIB aio REQUIRED)
+  link_libraries(${LIBAIO_LIB})
+  list(APPEND engine_sources "${CMAKE_SOURCE_DIR}/source/ioengines/engines/libaio.cpp")
+endif()
+if(ENABLE_IOURING)
+  find_library(IOURING_LIB uring REQUIRED)
+  link_libraries(${IOURING_LIB})
+
+  list(APPEND engine_sources "${CMAKE_SOURCE_DIR}/source/ioengines/engines/iouring.cpp")
+endif()
+
+# ---- Build filestorm object library ----
+
+add_library(${PROJECT_NAME} OBJECT ${common_headers} ${common_sources} ${engine_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 
 # being a cross-platform target, we enforce standards conformance on MSVC
@@ -75,32 +102,37 @@ else()
 endif()
 
 target_include_directories(
-  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
                          $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
 
-# ---- Create an installable target ----
-# this allows users to install and find the library via `find_package()`.
+# ---- Package metadata ----
 
-# the location where the project's version header will be placed should match the project's regular
-# header paths
-string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
+# Collect the names of the system‐package deps
+set(PACKAGE_DEPS "spdlog;fmt;eigen3")
+if(ENABLE_LIBAIO)
+  list(APPEND PACKAGE_DEPS "libaio")
+endif()
+if(ENABLE_IOURING)
+  list(APPEND PACKAGE_DEPS "liburing")
+endif()
 
 include(cmake/PackageProject.cmake)
-
 packageProject(
   NAME ${PROJECT_NAME}
   VERSION ${PROJECT_VERSION}
   NAMESPACE ${PROJECT_NAME}
   BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
+  INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
-  VERSION_HEADER "${VERSION_HEADER_LOCATION}"
+  VERSION_HEADER "${PROJECT_NAME}/version.h"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "spdlog;fmt;eigen3" CPACK YES
+  DEPENDENCIES "${PACKAGE_DEPS}" CPACK YES
 )
 
-file(GLOB standalone_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/standalone/source/*.cpp)
+# ---- Standalone executable ----
+
+file(GLOB standalone_sources CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/standalone/source/*.cpp")
 
 add_executable(${PROJECT_NAME}Executable ${standalone_sources})
 set_target_properties(${PROJECT_NAME}Executable PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "filestorm")
@@ -142,6 +174,16 @@ else()
       "cmake, gcc-c++, spdlog-devel, fmt-devel, git, json-devel, eigen3-devel"
   )
 endif()
+
+if(ENABLE_LIBAIO)
+  list(APPEND CPACK_RPM_PACKAGE_REQUIRES "libaio")
+  list(APPEND CPACK_RPM_BUILDREQUIRES "libaio-devel")
+endif()
+if(ENABLE_IOURING)
+  list(APPEND CPACK_RPM_PACKAGE_REQUIRES "liburing")
+  list(APPEND CPACK_RPM_BUILDREQUIRES "liburing-devel")
+endif()
+
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
