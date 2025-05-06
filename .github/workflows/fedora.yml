@@ -69,7 +69,7 @@ jobs:
     steps:
       - name: install_dependencies
         run: |
-          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel libaio-devel liburing-devel
+          dnf install -y cmake gcc-c++ make spdlog-devel git cxxopts-devel json-devel eigen3-devel libaio-devel liburing-devel rpmbuild
 
       - uses: actions/checkout@v4
         with:
