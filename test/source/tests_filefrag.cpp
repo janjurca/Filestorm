@@ -1,10 +1,9 @@
 #include <doctest/doctest.h>
+#include <fcntl.h>
 #include <filestorm/filefrag.h>
 #include <unistd.h>
 
 #include <cstdio>
-#include <exception>
-#include <fstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -16,30 +15,65 @@ std::string create_temp_file(const std::string& content) {
   if (fd == -1) {
     throw std::runtime_error("Failed to create temporary file.");
   }
-
-  // Write some content to the file
-  write(fd, content.c_str(), content.size());
+  // Write content
+  ssize_t written = write(fd, content.data(), content.size());
   close(fd);
-
-  // Return the path to the temporary file
-  return std::string(temp_filename);
+  if (written != static_cast<ssize_t>(content.size())) {
+    throw std::runtime_error("Failed to write full content");
+  }
+  return std::string(tmpl);
 }
 
-TEST_CASE("Error handling for non-existent file") {
-  // Setup: Specifying a file path that doesn't exist
-  const char* invalidFilePath = "/path/to/nonexistent/file.txt";
+TEST_CASE("get_extents throws on null path") { CHECK_THROWS_AS(get_extents(nullptr), std::runtime_error); }
 
-  SUBCASE("Throws runtime_error on missing file") { CHECK_THROWS_AS(get_extents(invalidFilePath), std::runtime_error); }
-  SUBCASE("Throws runtime_error on null file path") { CHECK_THROWS_AS(get_extents(nullptr), std::runtime_error); }
+TEST_CASE("get_extents throws on non-existent file") {
+  const char* invalid_path = "/path/to/nonexistent/file_foobar.txt";
+  CHECK_THROWS_AS(get_extents(invalid_path), std::runtime_error);
 }
 
-TEST_CASE("Error handling for non-existent or null file") {
-  const char* invalidFilePath = "/path/to/nonexistent/file.txt";
+#if defined(__linux__)
+TEST_CASE("get_extents returns a single extent for a small file") {
+  const std::string data = "Hello, Doctest!";
+  std::string path;
+  try {
+    path = create_temp_file(data);
+  } catch (const std::exception& e) {
+    FAIL("Failed to set up temp file: " << e.what());
+  }
 
-  SUBCASE("Throws runtime_error on missing file") { CHECK_THROWS_AS(get_extents(invalidFilePath), std::runtime_error); }
+  // Retrieve extents
+  std::vector<extents> ext_list;
+  CHECK_NOTHROW(ext_list = get_extents(path.c_str()));
 
-  SUBCASE("Throws runtime_error on null file path") { CHECK_THROWS_AS(get_extents(nullptr), std::runtime_error); }
+  // We expect at least one extent
+  REQUIRE(!ext_list.empty());
+
+  // First extent should start at 0 and cover the file length
+  CHECK(ext_list[0].logical == 0);
+  CHECK(ext_list[0].length == data.size());
+
+  // Clean up
+  unlink(path.c_str());
 }
+#endif
+
+// Optionally, if run on non-Linux, verify no extents returned
+#if !defined(__linux__)
+TEST_CASE("get_extents returns empty vector on non-Linux platforms") {
+  const std::string data = "Test";
+  std::string path;
+  try {
+    path = create_temp_file(data);
+  } catch (const std::exception& e) {
+    FAIL("Failed to set up temp file: " << e.what());
+  }
+
+  std::vector<extents> ext_list;
+  CHECK_NOTHROW(ext_list = get_extents(path.c_str()));
+  CHECK(ext_list.empty());
+  unlink(path.c_str());
+}
+#endif
 
 #if defined(__linux__)
 TEST_CASE("Valid file returns extents information") {
