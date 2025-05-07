@@ -582,6 +582,12 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
 
   double caf = CAF((float(fs_status.capacity - fs_status.available) / float(fs_status.capacity)));
   caf = floorTo(caf, 3);
+
+  // When there is no files in the system, we must write first file
+  // and then we can start to delete files. So we set pC to 1.0
+  if (tree.getFileCount() == 0) {
+    caf = 1.;
+  }
   probabilities["pC"] = caf;
   probabilities["pD"] = 0.1 * (1.0 - caf);
   probabilities["pA"] = 1 - caf - probabilities["pD"];
