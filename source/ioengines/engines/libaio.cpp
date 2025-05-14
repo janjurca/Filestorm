@@ -18,11 +18,11 @@ public:
 
   ssize_t write(int fd, void* buf, size_t count, off_t offset) override;
   ssize_t read(int fd, void* buf, size_t count, off_t offset) override;
+  ssize_t complete();
 
   std::string setup(int argc, char** argv) override;
 
 private:
-  ssize_t complete();
   ssize_t wait_for_some_completions();
 
   io_context_t ctx_ = 0;
