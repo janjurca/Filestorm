@@ -163,15 +163,23 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
 
         MeasuredCBAction action([&]() {
           off_t offset = 0;
-          for (uint64_t written_bytes = 0; written_bytes < file_size.get_value();) {
+          uint64_t written_bytes_optimistic = 0;
+          uint64_t written_bytes_true = 0;
+
+          for (; written_bytes_optimistic < file_size.get_value();) {
             ssize_t _written_bytes = ioengine->write(fd, line.get(), block_size, offset);
-            if (written_bytes == -1UL) {
+            if (_written_bytes == -1UL) {
               perror("Error writing to file");
               ioengine->close(fd);
               throw std::runtime_error(fmt::format("Error writing to file {}", file_node->path(true)));
             }
             offset += block_size;
-            written_bytes += _written_bytes;
+            written_bytes_optimistic += block_size;
+            written_bytes_true += _written_bytes;
+          }
+          written_bytes_true += ioengine->complete();
+          if (written_bytes_true != file_size.get_value()) {
+            logger.warn(fmt::format("Written bytes {} != file size {}", written_bytes_true, file_size.get_value()));
           }
         });
         auto duration = action.exec();
@@ -266,8 +274,10 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         MeasuredCBAction action([&]() {
           std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
           size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+          off_t offset = 0;
           for (uint64_t read_bytes = 0; read_bytes < file_size; read_bytes += block_size) {
-            ioengine->read(fd, line.get(), block_size);
+            ioengine->read(fd, line.get(), block_size, offset);
+            offset += block_size;
           }
         });
         auto duration = action.exec();

@@ -17,7 +17,7 @@ public:
   std::string description() const override { return "Libaio I/O engine"; }
 
   ssize_t write(int fd, void* buf, size_t count, off_t offset) override;
-  ssize_t read(int fd, void* buf, size_t count) override { throw std::runtime_error("Read operation not yet supported in libaio engine"); }
+  ssize_t read(int fd, void* buf, size_t count, off_t offset) override;
 
   std::string setup(int argc, char** argv) override;
 
@@ -53,11 +53,34 @@ std::string LibAIOEngine::setup(int argc, char** argv) {
 }
 
 LibAIOEngine::~LibAIOEngine() {
-  if (ctx_) io_destroy(ctx_);
+  if (ctx_) {
+    complete();
+    io_destroy(ctx_);
+  };
+}
+
+ssize_t LibAIOEngine::read(int fd, void* buf, size_t count, off_t offset) {
+  ssize_t processed_bytes = 0;
+  if (submitted_cbs.size() >= iodepth_) {
+    processed_bytes += wait_for_some_completions();  // Return bytes from one completed op
+  }
+
+  submitted_cbs.emplace_back();
+  struct iocb& cb = submitted_cbs.back();
+  memset(&cb, 0, sizeof(cb));
+  io_prep_pread(&cb, fd, buf, count, offset);
+  cb.data = &cb;
+
+  struct iocb* cbs[1] = {&cb};
+
+  int ret = io_submit(ctx_, 1, cbs);
+  if (ret < 0) {
+    throw std::runtime_error(std::string("io_submit read failed: ") + std::strerror(-ret));
+  }
+  return processed_bytes;
 }
 
 ssize_t LibAIOEngine::write(int fd, void* buf, size_t count, off_t offset) {
-  assert(reinterpret_cast<uintptr_t>(buf) % 512 == 0);
   ssize_t processed_bytes = 0;
   if (submitted_cbs.size() >= iodepth_) {
     processed_bytes += wait_for_some_completions();  // Return bytes from one completed op
@@ -92,7 +115,7 @@ ssize_t LibAIOEngine::complete() {
 
 ssize_t LibAIOEngine::wait_for_some_completions() {
   std::vector<io_event> events(iodepth_);
-  int ret = io_getevents(ctx_, 1, iodepth_, events, nullptr);
+  int ret = io_getevents(ctx_, 1, iodepth_, events.data(), nullptr);
   if (ret < 0) {
     throw std::runtime_error(std::string("io_getevents failed: ") + std::strerror(-ret));
   }
@@ -102,6 +125,9 @@ ssize_t LibAIOEngine::wait_for_some_completions() {
   for (int i = 0; i < ret; ++i) {
     struct iocb* completed_cb = static_cast<struct iocb*>(events[i].obj);
     ssize_t bytes = events[i].res;
+    if (events[i].res < 0) {
+      throw std::runtime_error(std::string("AIO operation failed: ") + std::strerror(-events[i].res));
+    }
     // Remove from submitted_cbs
     auto it = std::find_if(submitted_cbs.begin(), submitted_cbs.end(), [&](const struct iocb& cb) { return &cb == completed_cb; });
     if (it != submitted_cbs.end()) {
