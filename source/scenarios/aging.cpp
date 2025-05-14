@@ -162,13 +162,15 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         generate_random_chunk(line.get(), block_size);
 
         MeasuredCBAction action([&]() {
+          off_t offset = 0;
           for (uint64_t written_bytes = 0; written_bytes < file_size.get_value();) {
-            ssize_t _written_bytes = ioengine->write(fd, line.get(), block_size);
+            ssize_t _written_bytes = ioengine->write(fd, line.get(), block_size, offset);
             if (written_bytes == -1UL) {
               perror("Error writing to file");
               ioengine->close(fd);
               throw std::runtime_error(fmt::format("Error writing to file {}", file_node->path(true)));
             }
+            offset += block_size;
             written_bytes += _written_bytes;
           }
         });
@@ -229,13 +231,15 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         generate_random_chunk(line.get(), block_size);
         int fd = ioengine->open_file(prev_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
+          off_t offset = 0;
           for (uint64_t written_bytes = 0; written_bytes < file_size;) {
-            ssize_t written_bytes_ = ioengine->write(fd, line.get(), block_size);
+            ssize_t written_bytes_ = ioengine->write(fd, line.get(), block_size, offset);
             if (written_bytes == -1UL) {
               perror("Error writing to file");
               ioengine->close(fd);
               throw std::runtime_error(fmt::format("Error writing to file {}", prev_file_path));
             }
+            offset += block_size;
             written_bytes += written_bytes_;
           }
         });

@@ -8,8 +8,8 @@ public:
   SyncIOEngine();
   std::string name() const override { return "sync"; }
   std::string description() const override { return "POSIX synchronous I/O engine"; }
-  ssize_t read(int fd, void* buf, size_t count) override { return ::read(fd, buf, count); }
-  ssize_t write(int fd, void* buf, size_t count) override { return ::write(fd, buf, count); }
+  ssize_t read(int fd, void* buf, size_t count, off_t offset) override { return ::pread(fd, buf, count, offset); }
+  ssize_t write(int fd, void* buf, size_t count, off_t offset) override { return ::pwrite(fd, buf, count, offset); }
 };
 REGISTER_IO_ENGINE(SyncIOEngine);
 
