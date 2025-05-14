@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <filestorm/ioengines/ioengine.h>
 #include <filestorm/ioengines/register.h>
+#include <filestorm/utils/logger.h>
 #include <libaio.h>
 #include <unistd.h>
 
@@ -27,7 +28,7 @@ private:
 
   io_context_t ctx_ = 0;
   unsigned iodepth_ = 1;
-  std::vector<struct iocb> submitted_cbs;
+  unsigned submitted_cbs = 0;
 };
 
 LibAIOEngine::LibAIOEngine() {
@@ -48,7 +49,6 @@ std::string LibAIOEngine::setup(int argc, char** argv) {
     ctx_ = 0;
     throw std::runtime_error(std::string("io_setup failed: ") + std::strerror(errno));
   }
-  submitted_cbs.reserve(iodepth_);
   return ret;
 }
 
@@ -61,49 +61,49 @@ LibAIOEngine::~LibAIOEngine() {
 
 ssize_t LibAIOEngine::read(int fd, void* buf, size_t count, off_t offset) {
   ssize_t processed_bytes = 0;
-  if (submitted_cbs.size() >= iodepth_) {
+  if (submitted_cbs >= iodepth_) {
     processed_bytes += wait_for_some_completions();  // Return bytes from one completed op
   }
 
-  submitted_cbs.emplace_back();
-  struct iocb& cb = submitted_cbs.back();
-  memset(&cb, 0, sizeof(cb));
-  io_prep_pread(&cb, fd, buf, count, offset);
-  cb.data = &cb;
+  auto cb = new iocb();
+  memset(cb, 0, sizeof(cb));
+  io_prep_pread(cb, fd, buf, count, offset);
+  cb->data = cb;
 
-  struct iocb* cbs[1] = {&cb};
+  struct iocb* cbs[1] = {cb};
 
   int ret = io_submit(ctx_, 1, cbs);
   if (ret < 0) {
     throw std::runtime_error(std::string("io_submit read failed: ") + std::strerror(-ret));
   }
+  submitted_cbs++;
   return processed_bytes;
 }
 
 ssize_t LibAIOEngine::write(int fd, void* buf, size_t count, off_t offset) {
   ssize_t processed_bytes = 0;
-  if (submitted_cbs.size() >= iodepth_) {
+  if (submitted_cbs >= iodepth_) {
     processed_bytes += wait_for_some_completions();  // Return bytes from one completed op
   }
 
-  submitted_cbs.emplace_back();
-  struct iocb& cb = submitted_cbs.back();
-  memset(&cb, 0, sizeof(cb));
-  io_prep_pwrite(&cb, fd, buf, count, offset);
-  cb.data = &cb;
+  auto cb = new iocb();
+  memset(cb, 0, sizeof(cb));
+  io_prep_pwrite(cb, fd, buf, count, offset);
+  cb->data = cb;
 
-  struct iocb* cbs[1] = {&cb};
+  struct iocb* cbs[1] = {cb};
 
   int ret = io_submit(ctx_, 1, cbs);
   if (ret < 0) {
     throw std::runtime_error(std::string("io_submit write failed: ") + std::strerror(-ret));
   }
+  submitted_cbs++;
   return processed_bytes;
 }
 
 ssize_t LibAIOEngine::complete() {
   ssize_t total_bytes = 0;
-  while (submitted_cbs.size() > 0) {
+  while (submitted_cbs > 0) {
     ssize_t bytes = wait_for_some_completions();
     if (bytes < 0) {
       throw std::runtime_error(std::string("wait_for_some_completions failed: ") + std::strerror(-bytes));
@@ -128,11 +128,14 @@ ssize_t LibAIOEngine::wait_for_some_completions() {
     if (events[i].res < 0) {
       throw std::runtime_error(std::string("AIO operation failed: ") + std::strerror(-events[i].res));
     }
-    // Remove from submitted_cbs
-    auto it = std::find_if(submitted_cbs.begin(), submitted_cbs.end(), [&](const struct iocb& cb) { return &cb == completed_cb; });
-    if (it != submitted_cbs.end()) {
-      submitted_cbs.erase(it);
+    if (events[i].res2 != 0) {
+      throw std::runtime_error(std::string("AIO operation failed with unexpected result: ") + std::strerror(-events[i].res2));
     }
+    if (completed_cb->data != completed_cb) {
+      throw std::runtime_error("AIO operation completed with unexpected data");
+    }
+    delete static_cast<iocb*>(events[i].obj);
+    submitted_cbs--;
     total_bytes += bytes;
   }
 

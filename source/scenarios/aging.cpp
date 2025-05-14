@@ -152,40 +152,57 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
       case DELETE:
         // logger.debug("DELETE");
         break;
+
       case CREATE_FILE: {
         FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
         logger.debug(fmt::format("CREATE_FILE {}", file_node->path(true)));
+
         DataSize<DataUnit::B> file_size = get_file_size();
-        int fd = ioengine->open_file(file_node->path(true).c_str(), O_WRONLY | O_CREAT | O_TRUNC, getParameter("direct_io").get_bool());  // add directio
-        std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
-        generate_random_chunk(line.get(), block_size);
+
+        // Allocate aligned memory
+        void* aligned_buf = nullptr;
+        int alignment = 4096;  // Typically required for O_DIRECT
+        if (posix_memalign(&aligned_buf, alignment, block_size) != 0) {
+          throw std::runtime_error("posix_memalign failed for aligned buffer");
+        }
+
+        generate_random_chunk(static_cast<char*>(aligned_buf), block_size);
+
+        int fd = ioengine->open_file(file_node->path(true).c_str(), O_WRONLY | O_CREAT | O_TRUNC, getParameter("direct_io").get_bool());
 
         MeasuredCBAction action([&]() {
           off_t offset = 0;
           uint64_t written_bytes_optimistic = 0;
           uint64_t written_bytes_true = 0;
 
-          for (; written_bytes_optimistic < file_size.get_value();) {
-            ssize_t _written_bytes = ioengine->write(fd, line.get(), block_size, offset);
-            if (_written_bytes == -1UL) {
+          while (written_bytes_optimistic < file_size.get_value()) {
+            ssize_t _written_bytes = ioengine->write(fd, aligned_buf, block_size, offset);
+            if (_written_bytes == -1) {
               perror("Error writing to file");
               ioengine->close(fd);
+              free(aligned_buf);
               throw std::runtime_error(fmt::format("Error writing to file {}", file_node->path(true)));
             }
-            offset += block_size;
+            offset += _written_bytes;
             written_bytes_optimistic += block_size;
             written_bytes_true += _written_bytes;
           }
+
           written_bytes_true += ioengine->complete();
-          if (written_bytes_true != file_size.get_value()) {
-            logger.warn(fmt::format("Written bytes {} != file size {}", written_bytes_true, file_size.get_value()));
+
+          if (written_bytes_true != written_bytes_optimistic) {
+            logger.warn(fmt::format("Written bytes {} != written_bytes_optimistic {}", written_bytes_true, written_bytes_optimistic));
           }
         });
+
         auto duration = action.exec();
         ioengine->close(fd);
+        free(aligned_buf);  // Free aligned memory
+
         logger.debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
                                  (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+
         touched_files.push_back(file_node);
 
         result.setAction(Result::Action::CREATE_FILE);
@@ -195,6 +212,7 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         result.setDuration(duration);
         break;
       }
+
       case CREATE_FILE_FALLOCATE: {
         FileTree::Nodeptr file_node = tree.mkfile(tree.newFilePath());
         logger.debug(fmt::format("CREATE_FILE_FALLOCATE {}", file_node->path(true)));
@@ -231,25 +249,37 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         auto prev_file = touched_files.back();
         assert(prev_file != nullptr);
         assert(prev_file->getFallocationCount() == 0);
+
         auto prev_file_path = prev_file->path(true);
         auto file_size = fs_utils::file_size(prev_file_path);
         logger.debug("CREATE_FILE_OVERWRITE {} size {}", prev_file_path, file_size);
-        std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
+
         size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
-        generate_random_chunk(line.get(), block_size);
+
+        // Allocate aligned memory for O_DIRECT
+        void* aligned_buf = nullptr;
+        int alignment = 4096;  // common page size for O_DIRECT, verify against your FS/ioengine
+        if (posix_memalign(&aligned_buf, alignment, block_size) != 0) {
+          throw std::runtime_error("posix_memalign failed for aligned buffer");
+        }
+
+        generate_random_chunk(static_cast<char*>(aligned_buf), block_size);
+
         int fd = ioengine->open_file(prev_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
+
         MeasuredCBAction action([&]() {
           off_t offset = 0;
           uint64_t written_bytes_optimistic = 0;
           uint64_t written_bytes_true = 0;
-          for (; written_bytes_optimistic < file_size;) {
-            ssize_t written_bytes_ = ioengine->write(fd, line.get(), block_size, offset);
-            if (written_bytes_ == -1UL) {
+          while (written_bytes_optimistic < file_size) {
+            ssize_t written_bytes_ = ioengine->write(fd, aligned_buf, block_size, offset);
+            if (written_bytes_ == -1) {
               perror("Error writing to file");
               ioengine->close(fd);
+              free(aligned_buf);
               throw std::runtime_error(fmt::format("Error writing to file {}", prev_file_path));
             }
-            offset += block_size;
+            offset += written_bytes_;
             written_bytes_optimistic += block_size;
             written_bytes_true += written_bytes_;
           }
@@ -258,8 +288,11 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
             logger.warn(fmt::format("Written bytes {} != file size {}", written_bytes_true, written_bytes_optimistic));
           }
         });
+
         auto duration = action.exec();
         ioengine->close(fd);
+        free(aligned_buf);  // free aligned memory
+
         logger.debug(fmt::format("CREATE_FILE_OVERWRITE {} Wrote {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0,
                                  (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0)));
 
@@ -270,6 +303,7 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         result.setDuration(duration);
         break;
       }
+
       case CREATE_FILE_READ: {
         auto prev_file = touched_files.back();
         assert(prev_file != nullptr);
@@ -277,33 +311,50 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         auto prev_file_path = prev_file->path(true);
         auto file_size = fs_utils::file_size(prev_file_path);
         logger.debug("CREATE_FILE_READ {} size {}", prev_file_path, file_size);
+
         int fd = ioengine->open_file(prev_file_path.c_str(), O_RDONLY, getParameter("direct_io").get_bool());
+
         MeasuredCBAction action([&]() {
-          std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
           size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
+
+          // Allocate aligned memory
+          void* aligned_buf = nullptr;
+          int alignment = 4096;  // Typically required for O_DIRECT
+          if (posix_memalign(&aligned_buf, alignment, block_size) != 0) {
+            throw std::runtime_error("posix_memalign failed for aligned buffer");
+          }
+
           off_t offset = 0;
           uint64_t read_bytes_optimistic = 0;
           uint64_t read_bytes_true = 0;
-          for (; read_bytes_optimistic < file_size; read_bytes_optimistic += block_size) {
-            ssize_t read_bytes_ = ioengine->read(fd, line.get(), block_size, offset);
-            if (read_bytes_ == -1UL) {
+
+          while (read_bytes_optimistic < file_size) {
+            ssize_t read_bytes_ = ioengine->read(fd, aligned_buf, block_size, offset);
+            if (read_bytes_ == -1) {
               perror("Error reading from file");
               ioengine->close(fd);
+              free(aligned_buf);
               throw std::runtime_error(fmt::format("Error reading from file {}", prev_file_path));
             }
-            offset += block_size;
+            offset += read_bytes_;
             read_bytes_optimistic += block_size;
             read_bytes_true += read_bytes_;
           }
+
           read_bytes_true += ioengine->complete();
-          if (read_bytes_true != read_bytes_optimistic) {
-            logger.warn(fmt::format("Read bytes {} != file size {}", read_bytes_true, read_bytes_optimistic));
+          free(aligned_buf);  // Always free allocated memory
+
+          if (read_bytes_true != file_size) {
+            logger.warn(fmt::format("Read bytes {} != file size {}", read_bytes_true, file_size));
           }
         });
+
         auto duration = action.exec();
         ioengine->close(fd);
+
         logger.debug(fmt::format("CREATE_FILE_READ {} Read {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0,
                                  (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+
         result.setAction(Result::Action::CREATE_FILE_READ);
         result.setOperation(Result::Operation::READ);
         result.setPath(prev_file_path);
@@ -484,7 +535,7 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         MeasuredCBAction action([&]() {
           for (; write_offset < new_file_size.get_value();) {
             // Use pwrite() to avoid O_APPEND issues and ensure aligned writes
-            ssize_t written_bytes_ = pwrite(fd, buf, block_size, write_offset);
+            ssize_t written_bytes_ = pwrite(fd, buf, block_size, write_offset);  // todo use ioengine->write
             if (written_bytes_ == -1) {
               perror("Error writing to file");
               ioengine->close(fd);
