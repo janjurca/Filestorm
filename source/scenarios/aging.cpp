@@ -240,15 +240,22 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         int fd = ioengine->open_file(prev_file_path.c_str(), O_WRONLY, getParameter("direct_io").get_bool());
         MeasuredCBAction action([&]() {
           off_t offset = 0;
-          for (uint64_t written_bytes = 0; written_bytes < file_size;) {
+          uint64_t written_bytes_optimistic = 0;
+          uint64_t written_bytes_true = 0;
+          for (; written_bytes_optimistic < file_size;) {
             ssize_t written_bytes_ = ioengine->write(fd, line.get(), block_size, offset);
-            if (written_bytes == -1UL) {
+            if (written_bytes_ == -1UL) {
               perror("Error writing to file");
               ioengine->close(fd);
               throw std::runtime_error(fmt::format("Error writing to file {}", prev_file_path));
             }
             offset += block_size;
-            written_bytes += written_bytes_;
+            written_bytes_optimistic += block_size;
+            written_bytes_true += written_bytes_;
+          }
+          written_bytes_true += ioengine->complete();
+          if (written_bytes_true != written_bytes_optimistic) {
+            logger.warn(fmt::format("Written bytes {} != file size {}", written_bytes_true, written_bytes_optimistic));
           }
         });
         auto duration = action.exec();
@@ -275,9 +282,22 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
           std::unique_ptr<char[]> line(new char[get_block_size().get_value()]);
           size_t block_size = get_block_size().convert<DataUnit::B>().get_value();
           off_t offset = 0;
-          for (uint64_t read_bytes = 0; read_bytes < file_size; read_bytes += block_size) {
-            ioengine->read(fd, line.get(), block_size, offset);
+          uint64_t read_bytes_optimistic = 0;
+          uint64_t read_bytes_true = 0;
+          for (; read_bytes_optimistic < file_size; read_bytes_optimistic += block_size) {
+            ssize_t read_bytes_ = ioengine->read(fd, line.get(), block_size, offset);
+            if (read_bytes_ == -1UL) {
+              perror("Error reading from file");
+              ioengine->close(fd);
+              throw std::runtime_error(fmt::format("Error reading from file {}", prev_file_path));
+            }
             offset += block_size;
+            read_bytes_optimistic += block_size;
+            read_bytes_true += read_bytes_;
+          }
+          read_bytes_true += ioengine->complete();
+          if (read_bytes_true != read_bytes_optimistic) {
+            logger.warn(fmt::format("Read bytes {} != file size {}", read_bytes_true, read_bytes_optimistic));
           }
         });
         auto duration = action.exec();
