@@ -22,8 +22,9 @@ public:
   virtual ~IOEngine() = default;
   virtual std::string name() const = 0;
   virtual std::string description() const = 0;
-  virtual ssize_t read(int fd, void* buf, size_t count) = 0;
-  virtual ssize_t write(int fd, void* buf, size_t count) = 0;
+  virtual ssize_t read(int fd, void* buf, size_t count, off_t offset) = 0;
+  virtual ssize_t write(int fd, void* buf, size_t count, off_t offset) = 0;
+  virtual ssize_t complete() = 0;
   virtual void sync(int fd) {
     if (fsync(fd) == -1) {
       perror("Error syncing file");
