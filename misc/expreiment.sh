@@ -28,10 +28,10 @@ mkfs_cmds=(
 )
 
 FILESTORM_CMDS=(
-    'filestorm aging -d /mnt/test -o true -t 120m --create-dir true'
-    'filestorm aging -d /mnt/test -o true -t 20m --rapid-aging true --create-dir true --rapid-aging-threshold 30'
-    'filestorm aging -d /mnt/test -o true -t 120m --create-dir true'
-    'filestorm aging -d /mnt/test -o true -t 20m --rapid-aging true --create-dir true --rapid-aging-threshold 30'
+    'filestorm libaio aging -d /mnt/test -o true -t 120m --create-dir true'
+    'filestorm libaio aging -d /mnt/test -o true -t 20m --rapid-aging true --create-dir true --rapid-aging-threshold 30'
+    'filestorm libaio aging -d /mnt/test -o true -t 120m --create-dir true'
+    'filestorm libaio aging -d /mnt/test -o true -t 20m --rapid-aging true --create-dir true --rapid-aging-threshold 30'
 )
 
 FILESTORM_BLOCKSIZES=(
@@ -62,7 +62,7 @@ for filestorm_cmd in "${FILESTORM_CMDS[@]}"; do
             mount "$DRIVE" /mnt || { echo "Error: mount $DRIVE /mnt failed."; continue; }
 
             # Run filestorm with blocksize
-            echo "Running: $filestorm_cmd --blocksize $blocksize"
+            echo "Running: $filestorm_cmd -b $blocksize"
             $filestorm_cmd -b $blocksize --save-to "result_${blocksize}.json" || { echo "Error: $filestorm_cmd --blocksize $blocksize failed."; continue; }
 
             # Unmount the drive
