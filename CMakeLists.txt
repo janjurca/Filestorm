@@ -170,7 +170,7 @@ install(TARGETS ${PROJECT_NAME}Executable RUNTIME DESTINATION ${CMAKE_INSTALL_BI
 if(USE_CPM)
   set(CPACK_RPM_BUILDREQUIRES "cmake, gcc-c++, git")
 else()
-  set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt, json-devel, eigen3")
+  set(CPACK_RPM_PACKAGE_REQUIRES "spdlog, fmt")
   set(CPACK_RPM_BUILDREQUIRES
       "cmake, gcc-c++, spdlog-devel, fmt-devel, git, json-devel, eigen3-devel"
   )
