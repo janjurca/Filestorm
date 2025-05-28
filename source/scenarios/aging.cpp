@@ -48,6 +48,7 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("", "create-dir", "If testing directory doesn't exists try to create it.", "false"));
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
   addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
+  addParameter(Parameter("", "cleanup", "Should clean up files/folders after the test is done", "true"));
   addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "37"));
   addParameter(Parameter("", "rapid-aging-min-time", "Minimal time to run rapid aging in seconds", "5"));
   addParameter(Parameter("", "settings-safe-margin",
@@ -656,11 +657,14 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
   }
   logger.set_progress_bar(nullptr);
   logger.info("File count: {}, total extents: {}", file_count, total_extents);
-  // cleanup
-  for (auto& file : tree.all_files) {
-    std::filesystem::remove(file->path(true));
+  if (getParameter("cleanup").get_bool()) {
+    for (auto& file : tree.all_files) {
+      std::filesystem::remove(file->path(true));
+    }
+    tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Nodeptr dir) { std::filesystem::remove(dir->path(true)); });
+  } else {
+    logger.info("Not cleaning up, files will remain in the directory");
   }
-  tree.bottomUpDirWalk(tree.getRoot(), [&](FileTree::Nodeptr dir) { std::filesystem::remove(dir->path(true)); });
 }
 
 void AgingScenario::compute_probabilities(std::map<std::string, double>& probabilities, FileTree& tree, PolyCurve& curve) {
