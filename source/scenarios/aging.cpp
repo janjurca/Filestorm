@@ -49,6 +49,7 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("", "features-punch-hole", "Whether to do hole punching in file", "true"));
   addParameter(Parameter("", "features-log-probs", "Should log probabilities", "false"));
   addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "37"));
+  addParameter(Parameter("", "rapid-aging-min-time", "Minimal time to run rapid aging in seconds", "5"));
   addParameter(Parameter("", "settings-safe-margin",
                          "When new file is computed and there is not enough space the new file size is shrinked to available size but in some cases the fs has a file size overhead because of "
                          "metadata writes which are hard to predict and compute. So the safe margin is introduced which specify what is a minimal space amount that should be left available",
@@ -137,6 +138,18 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
   while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
          && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
     result.setIteration(iteration);
+
+    if (extents_curve.getPointCount() > 10
+        && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
+               > std::chrono::duration_cast<std::chrono::seconds>(stringToChrono(getParameter("rapid-aging-min-time").get_string()))) {
+      extents_curve.fitPolyCurve();
+      logger.debug("Extents curve angle: {}", extents_curve.slopeAngle());
+      if (extents_curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
+        rapid_aging = false;
+        logger.debug("Rapid aging - disabling");
+      }
+    }
+
     compute_probabilities(probabilities, tree, extents_curve);
     psm.performTransition(probabilities);
     switch (psm.getCurrentState()) {
@@ -468,7 +481,7 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
               throw std::runtime_error("fallocate failed for file: " + random_file_path);
             }
           } else {
-            logger.warn("File {} is already bigger than new size", random_file_path);
+            logger.warn("File {} is already bigger ({}) than new size ({})", random_file_path, actual_file_size, new_file_size.get_value());
           }
 #endif
           ioengine->close(fd);
@@ -703,14 +716,6 @@ void AgingScenario::compute_probabilities(std::map<std::string, double>& probabi
     probabilities["pCF"] = 0;
     probabilities["pABF"] = 1;
     probabilities["pABW"] = 0;
-    if (curve.getPointCount() > 10) {
-      curve.fitPolyCurve();
-      logger.debug("Extents curve angle: {}", curve.slopeAngle());
-      if (curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
-        rapid_aging = false;
-        logger.debug("Rapid aging - disabling");
-      }
-    }
   }
   probabilities["pCD"] = 1 - probabilities["pCF"] - probabilities["pCFF"];
   probabilities["pCFO"] = 0.3;
