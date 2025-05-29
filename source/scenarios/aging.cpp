@@ -140,14 +140,16 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
          && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
     result.setIteration(iteration);
 
-    if (extents_curve.getPointCount() > 10
-        && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
-               > std::chrono::duration_cast<std::chrono::seconds>(stringToChrono(getParameter("rapid-aging-min-time").get_string()))) {
-      extents_curve.fitPolyCurve();
-      logger.debug("Extents curve angle: {}", extents_curve.slopeAngle());
-      if (extents_curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
-        rapid_aging = false;
-        logger.debug("Rapid aging - disabling");
+    if (rapid_aging) {
+      if (extents_curve.getPointCount() > 10
+          && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
+                 > std::chrono::duration_cast<std::chrono::seconds>(stringToChrono(getParameter("rapid-aging-min-time").get_string()))) {
+        extents_curve.fitPolyCurve();
+        logger.debug("Extents curve angle: {}", extents_curve.slopeAngle());
+        if (extents_curve.slopeAngle() < getParameter("rapid-aging-threshold").get_int()) {
+          rapid_aging = false;
+          logger.debug("Rapid aging - disabling");
+        }
       }
     }
 
