@@ -50,9 +50,18 @@ std::string POSIXAIOEngine::setup(int argc, char** argv) {
 }
 
 POSIXAIOEngine::~POSIXAIOEngine() {
-  // Cleanup the submitted io requests
+  // Cancel and cleanup the submitted io requests
   for (auto req : io_requests_) {
-    delete req;
+    if (req) {
+      int cancel_ret = aio_cancel(req->aio_fildes, req);
+      if (cancel_ret == AIO_CANCELED || cancel_ret == AIO_NOTCANCELED) {
+        // Request was either successfully canceled or already completed
+      } else if (cancel_ret == -1) {
+        // Log an error if aio_cancel fails
+        Logger::error("Failed to cancel AIO request: " + std::string(std::strerror(errno)));
+      }
+      delete req;
+    }
   }
 }
 
