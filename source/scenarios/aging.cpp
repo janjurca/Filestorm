@@ -638,7 +638,11 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         if (extents_curve.isFitted()) {
           bar.set_meta("slope", fmt::format("{:.3f}", extents_curve.slopeAngle()));
         }
-        bar.update(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start));
+        if (getParameter("iterations").get_int() != -1) {
+          bar.update(iteration);
+        } else {
+          bar.update(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start));
+        }
         if (touched_files.size() > 0) {
           extents_curve.addPoint(tree.total_extents_count);
         }
