@@ -34,7 +34,7 @@ private:
 LibAIOEngine::LibAIOEngine() {
   // register CLI parameters
   addParameter(Parameter("h", "help", "Show help", "false", false));
-  addParameter(Parameter("", "iodepth", "I/O depth for libaio", "1"));
+  addParameter(Parameter("", "iodepth", "I/O depth for libaio", "32"));
 }
 
 std::string LibAIOEngine::setup(int argc, char** argv) {
