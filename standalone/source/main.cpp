@@ -1,7 +1,9 @@
 #include <filestorm/actions/actions.h>
 #include <filestorm/actions/rw_actions.h>
+#include <filestorm/config.h>
 #include <filestorm/data_sizes.h>
 #include <filestorm/ioengines/factory.h>
+#include <filestorm/result.h>
 #include <filestorm/utils/logger.h>
 #include <filestorm/version.h>
 #include <getopt.h>
@@ -14,7 +16,6 @@
 #include <string>
 #include <vector>
 
-#include "config.h"
 #include "interupts.h"
 
 void displayHelp() {
@@ -130,6 +131,18 @@ auto main(int argc, char** argv) -> int {
 
   auto scenario = Config::instance().createScenario(scenarioName);
   scenario->setup(scenarioArgc, scenarioArgv.data());
+
+  Result::addMeta("ioengine", ioengine->name());
+  Result::addMeta("scenario", scenario->name());
+  // add command line arguments to Result metas as a single string
+  std::string cmdline;
+  for (int i = 0; i < argc; ++i) {
+    cmdline += argv[i];
+    if (i < argc - 1) {
+      cmdline += " ";
+    }
+  }
+  Result::addMeta("cmdline", cmdline);
 
   std::signal(SIGINT, sigint_handler);
   scenario->run(ioengine);

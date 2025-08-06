@@ -4,6 +4,7 @@
 #include <filestorm/filefrag.h>
 #include <filestorm/filetree.h>
 #include <filestorm/utils/logger.h>
+#include <filestorm/version.h>
 
 #include <chrono>
 #include <filestorm/external/tabulate.hpp>
@@ -42,6 +43,7 @@ public:
   };
   enum Operation { WRITE, TRIM, OVERWRITE, READ, FALLOCATE };
   static std::vector<Result> results;
+  static std::map<std::string, std::string> metas;
 
 private:
   int _iteration;
@@ -139,6 +141,13 @@ public:
     std::ofstream file(filename);
     if (file.is_open()) {
       nlohmann::json jsonResults;
+      jsonResults["results"] = nlohmann::json::array();
+      nlohmann::json jsonmetas;
+      for (const auto& meta : metas) {
+        jsonmetas[meta.first] = meta.second;
+      }
+      jsonResults["metas"] = jsonmetas;
+      jsonResults["version"] = FILESTORM_VERSION;
       for (const auto& result : results) {
         nlohmann::json jsonResult;
         jsonResult["iteration"] = result.getIteration();
@@ -149,7 +158,7 @@ public:
         jsonResult["duration"] = result.getDuration().count();
         jsonResult["total_extents_count"] = result.getExtentsCount();
         jsonResult["file_extent_count"] = result.getFileExtentCount();
-        jsonResults.push_back(jsonResult);
+        jsonResults["results"].push_back(jsonResult);
       }
       file << jsonResults.dump(2);
       file.close();
@@ -243,6 +252,15 @@ public:
     stats.q3 = data[3 * data.size() / 4];
     return stats;
   }
+
+  static void addMeta(const std::string& key, const std::string& value) { metas[key] = value; }
+  static std::string getMeta(const std::string& key) {
+    if (metas.find(key) != metas.end()) {
+      return metas[key];
+    }
+    throw std::runtime_error(fmt::format("Meta key {} not found", key));
+  }
+  static void clearMetas() { metas.clear(); }
 };
 
 class BasicResult {

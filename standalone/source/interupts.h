@@ -1,13 +1,12 @@
 #pragma once
 
+#include <filestorm/config.h>
 #include <filestorm/result.h>
 #include <filestorm/utils/logger.h>
 #include <fmt/format.h>
 
 #include <iostream>
 #include <string>
-
-#include "config.h"
 
 void sigint_handler(int signum) {
   logger.set_progress_bar(nullptr);
