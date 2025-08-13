@@ -41,8 +41,20 @@ void ProgressBar::print_bar(bool clear) {
   if (previous_width != 0) {
     clear_line();
   }
+  // Add speed info to the progress bar info section
+  std::string speed_info = "";
+  if (!operation_speeds.empty()) {
+    speed_info += "[";
+    bool first = true;
+    for (const auto& speed : operation_speeds) {
+      if (!first) speed_info += "|";
+      speed_info += fmt::format("{}:{:.0f}(avg:{:.0f})", speed.first, speed.second, operation_speeds_container[speed.first].sum / operation_speeds_container[speed.first].count);
+      first = false;
+    }
+    speed_info += " MB/s]";
+  }
   float progress = (float)current / total;
-  std::string infos = "";
+  std::string infos = speed_info;
   for (auto meta : metas) {
     infos += fmt::format("[{}={}]", meta.first, meta.second);
   }
@@ -50,7 +62,7 @@ void ProgressBar::print_bar(bool clear) {
     std::chrono::duration<double> remaining = std::chrono::duration<double>((total - current) / (current / (elapsed / 1000.0)));
     double it_per_s = current / (elapsed / 1000.0);
 
-    infos += fmt::format("[{}/{}][{:.1f} it/s][ Remaining]", current, total, it_per_s, fmt::format("{:%H:%M:%S}", remaining));
+    infos += fmt::format("[{}/{}][{:.1f} it/s][Remaining: {}]", current, total, it_per_s, fmt::format("{:%H:%M:%S}", remaining));
   } else if (unit_type == UnitType::Time) {
     std::chrono::duration<int> done = std::chrono::duration<int>(current);
     std::chrono::duration<int> total_duration = std::chrono::duration<int>(total);
@@ -69,8 +81,9 @@ void ProgressBar::print_bar(bool clear) {
   if (clear) {
     clear_line(false);
   }
-  std::cout << prefix_infos << "[" << bar << "]" << infos;
-  std::cout.flush();
+
+  // Print progress bar with speeds included
+  std::cout << prefix_infos << "[" << bar << "]" << infos << std::flush;
   if (current == total) {
     return;
     disable();

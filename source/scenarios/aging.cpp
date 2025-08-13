@@ -216,9 +216,10 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         ioengine->close(fd);
         free(aligned_buf);  // Free aligned memory
 
-        logger.debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0,
-                                 (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+        double speed_mb_s = (file_size.get_value() / 1024. / 1024.) / (duration.count() / 1000000000.0);
+        logger.debug(fmt::format("CREATE_FILE {} Wrote {} MB in {} ms | Speed {} MB/s", file_node->path(true), int(file_size.get_value() / 1024. / 1024.), duration.count() / 1000000.0, speed_mb_s));
 
+        bar.set_operation_speed("WRITE", speed_mb_s);
         touched_files.push_back(file_node);
 
         result.setAction(Result::Action::CREATE_FILE);
@@ -309,8 +310,10 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         ioengine->close(fd);
         free(aligned_buf);  // free aligned memory
 
-        logger.debug(fmt::format("CREATE_FILE_OVERWRITE {} Wrote {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0,
-                                 (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+        double speed_mb_s = (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0);
+        logger.debug(fmt::format("CREATE_FILE_OVERWRITE {} Wrote {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0, speed_mb_s));
+
+        bar.set_operation_speed("OVERWRITE", speed_mb_s);
 
         result.setAction(Result::Action::CREATE_FILE_OVERWRITE);
         result.setOperation(Result::Operation::OVERWRITE);
@@ -368,8 +371,10 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         auto duration = action.exec();
         ioengine->close(fd);
 
-        logger.debug(fmt::format("CREATE_FILE_READ {} Read {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0,
-                                 (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0)));
+        double speed_mb_s = (file_size / 1024. / 1024.) / (duration.count() / 1000000000.0);
+        logger.debug(fmt::format("CREATE_FILE_READ {} Read {} MB in {} ms | Speed {} MB/s", prev_file_path, int(file_size / 1024. / 1024.), duration.count() / 1000000.0, speed_mb_s));
+
+        bar.set_operation_speed("READ", speed_mb_s);
 
         result.setAction(Result::Action::CREATE_FILE_READ);
         result.setOperation(Result::Operation::READ);

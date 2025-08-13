@@ -20,8 +20,15 @@ class ProgressBar {
   enum class UnitType { Time, Count };
 
   UnitType unit_type;
+  bool speeds_line_printed = false;
 
   std::map<std::string, std::string> metas = {};
+  std::map<std::string, double> operation_speeds = {};
+  struct OperationSpeedContainer {
+    double sum = 0;
+    int count = 0;
+  };
+  std::map<std::string, OperationSpeedContainer> operation_speeds_container;
 
 public:
   ProgressBar(int total, const std::string label) : total(total), label(label) {
@@ -44,6 +51,15 @@ public:
   void set_meta(const std::string &key, const std::string &value) { metas[key] = value; }
   void get_meta(const std::string &key) { metas[key]; }
   void clear_meta(const std::string &key) { metas.erase(key); }
+  void set_operation_speed(const std::string &operation, double speed_mb_s) {
+    operation_speeds[operation] = speed_mb_s;
+    operation_speeds_container[operation].sum += speed_mb_s;
+    operation_speeds_container[operation].count++;
+  }
+  void clear_operation_speeds() {
+    operation_speeds.clear();
+    operation_speeds_container.clear();
+  }
   void set_total(int total);
   void set_total(std::chrono::seconds total);
 
