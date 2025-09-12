@@ -307,3 +307,90 @@ FileTree::Nodeptr FileTree::randomPunchableFile() {
 bool FileTree::hasPunchableFiles() { return files_for_fallocate.size() > 0; }
 
 void FileTree::removeFromPunchableFiles(Nodeptr file) { files_for_fallocate.erase(std::remove(files_for_fallocate.begin(), files_for_fallocate.end(), file), files_for_fallocate.end()); }
+
+nlohmann::json FileTree::serializeAgingState() const {
+  nlohmann::json state;
+  
+  // Serialize atomic counters
+  state["directory_count"] = directory_count.load();
+  state["file_count"] = file_count.load();
+  state["directory_id"] = directory_id.load();
+  state["file_id"] = file_id.load();
+  state["total_extents_count"] = total_extents_count;
+  
+  // Serialize all files with their fallocate counts
+  nlohmann::json files_array = nlohmann::json::array();
+  for (const auto& file : all_files) {
+    nlohmann::json file_obj;
+    file_obj["path"] = file->path(false);  // relative path
+    file_obj["fallocated_count"] = file->fallocated_count;
+    files_array.push_back(file_obj);
+  }
+  state["files"] = files_array;
+  
+  // Serialize all directories
+  nlohmann::json dirs_array = nlohmann::json::array();
+  for (const auto& dir : all_directories) {
+    nlohmann::json dir_obj;
+    dir_obj["path"] = dir->path(false);  // relative path
+    dirs_array.push_back(dir_obj);
+  }
+  state["directories"] = dirs_array;
+  
+  return state;
+}
+
+void FileTree::loadAgingState(const nlohmann::json& state) {
+  // Load atomic counters
+  if (state.contains("directory_count")) {
+    directory_count.store(state["directory_count"]);
+  }
+  if (state.contains("file_count")) {
+    file_count.store(state["file_count"]);
+  }
+  if (state.contains("directory_id")) {
+    directory_id.store(state["directory_id"]);
+  }
+  if (state.contains("file_id")) {
+    file_id.store(state["file_id"]);
+  }
+  if (state.contains("total_extents_count")) {
+    total_extents_count = state["total_extents_count"];
+  }
+  
+  // Rebuild file tree structure from existing filesystem
+  if (state.contains("directories")) {
+    for (const auto& dir_data : state["directories"]) {
+      std::string dir_path = dir_data["path"];
+      try {
+        getNode(dir_path);  // This will reconstruct the tree structure
+      } catch (const std::exception&) {
+        // Directory might not exist anymore, skip
+      }
+    }
+  }
+  
+  if (state.contains("files")) {
+    for (const auto& file_data : state["files"]) {
+      std::string file_path = file_data["path"];
+      int fallocated_count = file_data.value("fallocated_count", 0);
+      
+      try {
+        Nodeptr file_node = getNode(file_path);
+        if (file_node && file_node->type == Type::FILE) {
+          file_node->fallocated_count = fallocated_count;
+          
+          // Add to vectors if not already present
+          if (std::find(all_files.begin(), all_files.end(), file_node) == all_files.end()) {
+            all_files.push_back(file_node);
+          }
+          if (std::find(files_for_fallocate.begin(), files_for_fallocate.end(), file_node) == files_for_fallocate.end()) {
+            files_for_fallocate.push_back(file_node);
+          }
+        }
+      } catch (const std::exception&) {
+        // File might not exist anymore, skip
+      }
+    }
+  }
+}

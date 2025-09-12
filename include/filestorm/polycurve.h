@@ -7,6 +7,7 @@
 #include <numeric>  // for std::reduce (C++17) or std::accumulate
 #include <stdexcept>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 class PolyCurve {
 public:
@@ -55,6 +56,10 @@ public:
   float slopeAngle() const;
 
   bool isFitted() const { return fitted; };
+
+  // Aging state serialization methods
+  nlohmann::json serializeState() const;
+  void loadState(const nlohmann::json& state);
 
 private:
   // Main data storage for points that will be used for fitting.

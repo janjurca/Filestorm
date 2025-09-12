@@ -55,27 +55,36 @@ AgingScenario::AgingScenario() {
                          "When new file is computed and there is not enough space the new file size is shrinked to available size but in some cases the fs has a file size overhead because of "
                          "metadata writes which are hard to predict and compute. So the safe margin is introduced which specify what is a minimal space amount that should be left available",
                          "1MB"));
+  addParameter(Parameter("", "continue-from-state", "Load and continue aging from a previous state file", ""));
 }
 
 AgingScenario::~AgingScenario() {}
 
 void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
-  if (!std::filesystem::exists(getParameter("directory").get_string())) {
-    if (getParameter("create-dir").get_bool()) {
-      std::filesystem::create_directories(getParameter("directory").get_string());
-    } else {
-      throw std::runtime_error(fmt::format("Directory {} does not exist!", getParameter("directory").get_string()));
+  bool loadingFromState = !getParameter("continue-from-state").get_string().empty();
+  
+  if (!loadingFromState) {
+    if (!std::filesystem::exists(getParameter("directory").get_string())) {
+      if (getParameter("create-dir").get_bool()) {
+        std::filesystem::create_directories(getParameter("directory").get_string());
+      } else {
+        throw std::runtime_error(fmt::format("Directory {} does not exist!", getParameter("directory").get_string()));
+      }
+    }
+    if (!std::filesystem::is_directory(getParameter("directory").get_string())) {
+      throw std::runtime_error(fmt::format("{} is not a directory!", getParameter("directory").get_string()));
+    }
+    if (!std::filesystem::is_empty(getParameter("directory").get_string())) {
+      logger.warn("Directory {} is not empty!", getParameter("directory").get_string());
+      throw std::runtime_error(fmt::format("{} is not empty!", getParameter("directory").get_string()));
+    }
+  } else {
+    if (!std::filesystem::exists(getParameter("directory").get_string()) || !std::filesystem::is_directory(getParameter("directory").get_string())) {
+      throw std::runtime_error(fmt::format("Directory {} does not exist or is not a directory when loading from state!", getParameter("directory").get_string()));
     }
   }
-  if (!std::filesystem::is_directory(getParameter("directory").get_string())) {
-    throw std::runtime_error(fmt::format("{} is not a directory!", getParameter("directory").get_string()));
-  }
-  if (!std::filesystem::is_empty(getParameter("directory").get_string())) {
-    logger.warn("Directory {} is not empty!", getParameter("directory").get_string());
-    throw std::runtime_error(fmt::format("{} is not empty!", getParameter("directory").get_string()));
-  }
-  rapid_aging = getParameter("rapid-aging").get_bool();
 
+  rapid_aging = getParameter("rapid-aging").get_bool();
   logger.debug("Rapid aging is: {}", rapid_aging);
 
   FileTree tree(getParameter("directory").get_string(), getParameter("depth").get_int());
@@ -114,7 +123,6 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
   int iteration = 0;
   std::chrono::seconds max_time = stringToChrono(getParameter("time").get_string());
   auto start = std::chrono::high_resolution_clock::now();
-  // progressbar bar(getParameter("iterations").get_int());
 
   std::vector<Result> results;
   ProbabilisticStateMachine psm(transitions, S);
@@ -122,8 +130,38 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
   std::vector<FileTree::Nodeptr> touched_files;
   Result result;
 
-  ///////// LOGGER settings
+  PolyCurve extents_curve(1, 10);
 
+  // Load previous state if specified
+  if (loadingFromState) {
+    try {
+      nlohmann::json agingState = Result::loadAgingState(getParameter("continue-from-state").get_string());
+      
+      // Load tree state 
+      if (agingState.contains("tree_state")) {
+        tree.loadAgingState(agingState["tree_state"]);
+      }
+      
+      // Load curve state
+      if (agingState.contains("curve_state")) {
+        extents_curve.loadState(agingState["curve_state"]);
+      }
+      
+      // Load scenario state
+      if (agingState.contains("iteration")) {
+        iteration = agingState["iteration"];
+      }
+      if (agingState.contains("rapid_aging")) {
+        rapid_aging = agingState["rapid_aging"];
+      }
+      
+      logger.info("Loaded aging state from {}, continuing from iteration {}", getParameter("continue-from-state").get_string(), iteration);
+    } catch (const std::exception& e) {
+      throw std::runtime_error(fmt::format("Failed to load aging state: {}", e.what()));
+    }
+  }
+
+  ///////// LOGGER settings
   ProgressBar bar("Aging Scenario");
   if (getParameter("iterations").get_int() != -1) {
     logger.warn("Iterations are set to {}", getParameter("iterations").get_int());
@@ -133,8 +171,6 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
     bar.set_total(std::chrono::duration_cast<std::chrono::seconds>(max_time));
   }
   logger.set_progress_bar(&bar);
-
-  PolyCurve extents_curve(1, 10);
 
   while ((iteration < getParameter("iterations").get_int() || getParameter("iterations").get_int() == -1)
          && (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start) < max_time || getParameter("iterations").get_int() != -1)) {
@@ -668,6 +704,25 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
   }
   logger.set_progress_bar(nullptr);
   logger.info("File count: {}, total extents: {}", file_count, total_extents);
+
+  // Save aging state for continuation
+  try {
+    nlohmann::json agingState;
+    agingState["tree_state"] = tree.serializeAgingState();
+    agingState["curve_state"] = extents_curve.serializeState();
+    agingState["iteration"] = iteration;
+    agingState["rapid_aging"] = rapid_aging;
+    agingState["total_extents"] = total_extents;
+    agingState["file_count"] = file_count;
+    agingState["timestamp"] = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    
+    std::string stateFilename = getParameter("directory").get_string() + "/aging_state.json";
+    Result::saveAgingState(stateFilename, agingState);
+    logger.info("Aging state saved to {}", stateFilename);
+  } catch (const std::exception& e) {
+    logger.error("Failed to save aging state: {}", e.what());
+  }
+
   if (getParameter("cleanup").get_bool()) {
     for (auto& file : tree.all_files) {
       std::filesystem::remove(file->path(true));

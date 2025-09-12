@@ -261,6 +261,10 @@ public:
     throw std::runtime_error(fmt::format("Meta key {} not found", key));
   }
   static void clearMetas() { metas.clear(); }
+
+  // Aging state serialization methods
+  static void saveAgingState(const std::string& filename, const nlohmann::json& agingState);
+  static nlohmann::json loadAgingState(const std::string& filename);
 };
 
 class BasicResult {

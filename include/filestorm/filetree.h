@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 class FileTree {
 public:
@@ -173,6 +174,10 @@ public:
     }
     return false;
   }
+
+  // Aging state serialization methods
+  nlohmann::json serializeAgingState() const;
+  void loadAgingState(const nlohmann::json& state);
 
 private:
   void printRec(const Nodeptr node, int depth) const;

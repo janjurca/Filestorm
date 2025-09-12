@@ -174,3 +174,58 @@ float PolyCurve::slopeAngle() const {
   double angle_deg = angle_rad * 180.0 / M_PI;
   return static_cast<float>(angle_deg);
 }
+
+nlohmann::json PolyCurve::serializeState() const {
+  nlohmann::json state;
+  
+  state["poly_degree"] = poly_degree;
+  state["subsampling"] = subsampling;
+  state["fitted"] = fitted;
+  state["maximum_value"] = maximum_value;
+  
+  // Serialize y_points
+  state["y_points"] = y_points;
+  
+  // Serialize y_subsample_buffer
+  state["y_subsample_buffer"] = y_subsample_buffer;
+  
+  // Serialize coefficients if fitted
+  if (fitted) {
+    std::vector<double> coeffs_vec;
+    for (int i = 0; i < coeffs.size(); ++i) {
+      coeffs_vec.push_back(coeffs[i]);
+    }
+    state["coefficients"] = coeffs_vec;
+  }
+  
+  return state;
+}
+
+void PolyCurve::loadState(const nlohmann::json& state) {
+  if (state.contains("poly_degree")) {
+    poly_degree = state["poly_degree"];
+    coeffs = Eigen::VectorXd::Zero(poly_degree + 1);
+  }
+  if (state.contains("subsampling")) {
+    subsampling = state["subsampling"];
+  }
+  if (state.contains("fitted")) {
+    fitted = state["fitted"];
+  }
+  if (state.contains("maximum_value")) {
+    maximum_value = state["maximum_value"];
+  }
+  if (state.contains("y_points")) {
+    y_points = state["y_points"].get<std::vector<float>>();
+  }
+  if (state.contains("y_subsample_buffer")) {
+    y_subsample_buffer = state["y_subsample_buffer"].get<std::vector<float>>();
+  }
+  if (state.contains("coefficients") && fitted) {
+    std::vector<double> coeffs_vec = state["coefficients"].get<std::vector<double>>();
+    coeffs = Eigen::VectorXd::Zero(coeffs_vec.size());
+    for (size_t i = 0; i < coeffs_vec.size(); ++i) {
+      coeffs[i] = coeffs_vec[i];
+    }
+  }
+}
