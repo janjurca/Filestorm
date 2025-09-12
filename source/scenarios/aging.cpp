@@ -51,6 +51,7 @@ AgingScenario::AgingScenario() {
   addParameter(Parameter("", "cleanup", "Should clean up files/folders after the test is done", "true"));
   addParameter(Parameter("", "rapid-aging-threshold", "Set threshold for rapid aging testing 90-0.where 90 is rapid aging essentially turned off and at 0  will probably never ends.", "37"));
   addParameter(Parameter("", "rapid-aging-min-time", "Minimal time to run rapid aging in seconds", "5s"));
+  addParameter(Parameter("", "rapid-aging-max-time", "Maximal time to run rapid aging in seconds", "10m"));
   addParameter(Parameter("", "settings-safe-margin",
                          "When new file is computed and there is not enough space the new file size is shrinked to available size but in some cases the fs has a file size overhead because of "
                          "metadata writes which are hard to predict and compute. So the safe margin is introduced which specify what is a minimal space amount that should be left available",
@@ -150,6 +151,12 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
           rapid_aging = false;
           logger.debug("Rapid aging - disabling");
         }
+      }
+      if (getParameter("rapid-aging-max-time").is_set()
+          && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
+                 > std::chrono::duration_cast<std::chrono::seconds>(stringToChrono(getParameter("rapid-aging-max-time").get_string()))) {
+        rapid_aging = false;
+        logger.debug("Rapid aging - disabling because of max time");
       }
     }
 
