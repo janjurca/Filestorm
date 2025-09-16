@@ -224,7 +224,7 @@ public:
     std::cout << "Total Size per Action (MB):" << std::endl;
     for (const auto& action : usedActions) {
       if (total_size_per_action.find(action) != total_size_per_action.end()) {
-        DataSize<DataUnit::MB> total_size_per_action_mb = total_size_per_action[action];
+        DataSize<DataUnit::MB> total_size_per_action_mb = DataSize<DataUnit::MB>(total_size_per_action[action], true);
         std::cout << "  " << actionToString(action) << ": " << fmt::format("{}", total_size_per_action_mb) << std::endl;
       }
     }
