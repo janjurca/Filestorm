@@ -78,6 +78,10 @@ public:
   }
 
   bool allow_rounding() const { return m_allow_rounding; }
+  bool allowRounding(bool allow) {
+    m_allow_rounding = allow;
+    return m_allow_rounding;
+  }
 
   static DataSize<T> fromString(const std::string &str) {
     std::string value_str;

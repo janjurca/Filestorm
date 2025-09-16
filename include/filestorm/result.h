@@ -93,7 +93,7 @@ public:
       total_duration_per_action[_action] = std::chrono::nanoseconds(0);
     }
     if (total_size_per_action.find(_action) == total_size_per_action.end()) {
-      total_size_per_action[_action] = DataSize<DataUnit::B>(0);
+      total_size_per_action[_action] = DataSize<DataUnit::B>(0, true);
     }
     total_duration_per_action[_action] += _duration;
     total_size_per_action[_action] += _size;
