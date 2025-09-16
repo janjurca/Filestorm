@@ -44,6 +44,8 @@ public:
   enum Operation { WRITE, TRIM, OVERWRITE, READ, FALLOCATE };
   static std::vector<Result> results;
   static std::map<std::string, std::string> metas;
+  static std::map<Action, std::chrono::nanoseconds> total_duration_per_action;
+  static std::map<Action, DataSize<DataUnit::B>> total_size_per_action;
 
 private:
   int _iteration;
@@ -85,7 +87,17 @@ public:
   void setExtentsCount(int64_t extents_count) { _total_extents_count = extents_count; }
   void setFileExtentCount(int64_t file_extent_count) { _file_extent_count = file_extent_count; }
 
-  void commit() { results.push_back(*this); }
+  void commit() {
+    results.push_back(*this);
+    if (total_duration_per_action.find(_action) == total_duration_per_action.end()) {
+      total_duration_per_action[_action] = std::chrono::nanoseconds(0);
+    }
+    if (total_size_per_action.find(_action) == total_size_per_action.end()) {
+      total_size_per_action[_action] = DataSize<DataUnit::B>(0);
+    }
+    total_duration_per_action[_action] += _duration;
+    total_size_per_action[_action] += _size;
+  }
 
   static constexpr const char* actionToString(Action action) {
     switch (action) {
@@ -202,6 +214,20 @@ public:
     table.format().font_align(tabulate::FontAlign::center).border_left("|").border_right("|");
 
     std::cout << table << std::endl;
+    // print total duration and total size per action
+    std::cout << "Total Duration per Action (seconds):" << std::endl;
+    for (const auto& action : usedActions) {
+      if (total_duration_per_action.find(action) != total_duration_per_action.end()) {
+        std::cout << "  " << actionToString(action) << ": " << std::chrono::duration_cast<std::chrono::seconds>(total_duration_per_action[action]).count() << " s" << std::endl;
+      }
+    }
+    std::cout << "Total Size per Action (MB):" << std::endl;
+    for (const auto& action : usedActions) {
+      if (total_size_per_action.find(action) != total_size_per_action.end()) {
+        DataSize<DataUnit::MB> total_size_per_action_mb = total_size_per_action[action];
+        std::cout << "  " << actionToString(action) << ": " << fmt::format("{}", total_size_per_action_mb) << std::endl;
+      }
+    }
   }
 
   static std::vector<Result> getActionResults(Action action) {

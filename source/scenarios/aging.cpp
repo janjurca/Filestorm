@@ -160,7 +160,7 @@ void AgingScenario::run(std::unique_ptr<IOEngine>& ioengine) {
         rapid_aging = false;
         logger.debug("Rapid aging - disabling because of max time");
       }
-      if (getParameter("rapid-aging-max-extents").is_set() && tree.getTotalExtents() > getParameter("rapid-aging-max-extents").get_int()) {
+      if (getParameter("rapid-aging-max-extents").is_set() && tree.total_extents_count > getParameter("rapid-aging-max-extents").get_int()) {
         rapid_aging = false;
         logger.debug("Rapid aging - disabling because of max extents");
       }
